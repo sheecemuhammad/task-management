@@ -16,7 +16,7 @@ export class UsersService {
     return this.usersRepository.findByEmail(email);
   }
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto){
     const existingUser = await this.usersRepository.findByEmail(
       createUserDto.email,
     );

@@ -18,19 +18,36 @@ export class UsersRepository {
     });
   }
 
-  async create(data: Prisma.UserCreateInput): Promise<User> {
+  async create(data: Prisma.UserCreateInput) {
     return this.prisma.user.create({
       data,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+        provider: true,
+        providerId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
-  async update(
-    id: string,
-    data: Prisma.UserUpdateInput,
-  ): Promise<User> {
-    return this.prisma.user.update({
-      where: { id },
-      data,
-    });
-  }
+  async update(id: string, data: Prisma.UserUpdateInput) {
+  return this.prisma.user.update({
+    where: { id },
+    data,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      avatarUrl: true,
+      provider: true,
+      providerId: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+}
 }
