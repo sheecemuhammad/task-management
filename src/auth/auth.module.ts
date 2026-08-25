@@ -6,6 +6,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { RefreshSessionRepository } from './repositories/refresh-session.repository';
 import { StringValue } from 'ms';
 
 @Module({
@@ -25,6 +26,11 @@ import { StringValue } from 'ms';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  providers: [
+  AuthService,
+  JwtStrategy,
+  JwtAuthGuard,
+  RefreshSessionRepository,
+],
 })
 export class AuthModule {}
