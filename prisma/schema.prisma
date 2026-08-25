@@ -35,10 +35,11 @@ model User {
   provider   String  @default("local")
   providerId String?
 
-  teamMembers   TeamMember[]
-  tasksAssigned Task[]       @relation("TaskAssignee")
-  comments      Comment[]
-  auditLogs     AuditLog[]
+  teamMembers     TeamMember[]
+  tasksAssigned   Task[]           @relation("TaskAssignee")
+  comments        Comment[]
+  auditLogs       AuditLog[]
+  refreshSessions RefreshSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -164,4 +165,20 @@ model AuditLog {
 
   @@index([userId])
   @@index([entityType, entityId])
+}
+
+model RefreshSession {
+  id        String @id @default(uuid())
+  tokenHash String @unique
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
