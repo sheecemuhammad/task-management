@@ -5,8 +5,12 @@ import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleStrategy } from './strategies/google.strategy';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
+import { GithubStrategy } from './strategies/github.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RefreshSessionRepository } from './repositories/refresh-session.repository';
+import { OAuthAccountRepository } from './repositories/oauth-account.repository';
 import { StringValue } from 'ms';
 
 @Module({
@@ -30,7 +34,11 @@ import { StringValue } from 'ms';
   AuthService,
   JwtStrategy,
   JwtAuthGuard,
+  GoogleStrategy,
+  GoogleAuthGuard,
+  GithubStrategy,
   RefreshSessionRepository,
+  OAuthAccountRepository,
 ],
 })
 export class AuthModule {}

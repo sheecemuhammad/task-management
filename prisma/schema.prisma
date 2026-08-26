@@ -27,22 +27,36 @@ enum TaskStatus {
 }
 
 model User {
-  id         String  @id @default(uuid())
-  email      String  @unique
-  password   String?
-  name       String
-  avatarUrl  String?
-  provider   String  @default("local")
-  providerId String?
+  id        String  @id @default(uuid())
+  email     String  @unique
+  password  String?
+  name      String
+  avatarUrl String?
 
   teamMembers     TeamMember[]
   tasksAssigned   Task[]           @relation("TaskAssignee")
   comments        Comment[]
   auditLogs       AuditLog[]
   refreshSessions RefreshSession[]
+  oauthAccounts   OAuthAccount[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model OAuthAccount {
+  id         String @id @default(uuid())
+  provider   String
+  providerId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerId])
+  @@index([userId])
 }
 
 model Team {
