@@ -1,0 +1,30 @@
+$kind: http-example
+request:
+  url: http://localhost:3000/auth/me
+  method: GET
+  body:
+    type: json
+    content: "{\r
+
+      \    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNTUzMTI4OC0zNTk3LTQ2ZTktYjU0YS1kMWUxNDE4MzcwMDkiLCJlbWFpbCI6InNoZWVjZW9mZmljaWFsQGdtYWlsLmNvbSIsImlhdCI6MTc4Nzc5MDAzMywiZXhwIjoxNzg3NzkwOTMzfQ.JfDbD9Ztj_fvYvC9IZK2oR4K7CjfylWDtXtLvOHUozg\"\r
+
+      }"
+response:
+  statusCode: 401
+  statusText: Unauthorized
+  headers:
+    x-powered-by: Express
+    content-type: application/json; charset=utf-8
+    content-length: "43"
+    etag: W/"2b-dGnJzt6gv1nJjX6DJ9RztDWptng"
+    date: Thu, 27 Aug 2026 00:24:38 GMT
+    connection: keep-alive
+    keep-alive: timeout=5
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Unauthorized",
+        "statusCode": 401
+      }
+order: 1787790334662

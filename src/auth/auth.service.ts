@@ -8,6 +8,7 @@ import { UsersRepository } from '../users/users.repository';
 import { LoginDto } from './dto/login.dto';
 import { RefreshSessionRepository } from './repositories/refresh-session.repository';
 import { OAuthAccountRepository } from './repositories/oauth-account.repository';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +22,8 @@ export class AuthService {
     private readonly refreshSessionRepository: RefreshSessionRepository,
 
     private readonly oauthAccountRepository: OAuthAccountRepository,
+
+    private readonly mailService: MailService,
   ) {}
 
   // Generate a random refresh token and return it as a string
@@ -54,6 +57,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    try {
+      await this.mailService.sendLoginSecurityAlert(user.email, user.name);
+    } catch (error) {
+      console.error('Failed to send login security alert:', error);
+    }
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
