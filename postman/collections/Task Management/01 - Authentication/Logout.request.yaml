@@ -1,0 +1,12 @@
+$kind: http-request
+name: Logout
+url: "{{baseUrl}}/auth/logout"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"refreshToken\": \"{{refreshToken}}\"\r
+
+    }"
+order: 4412715874507015

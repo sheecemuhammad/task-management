@@ -60,10 +60,11 @@ model OAuthAccount {
 }
 
 model Team {
-  id         String       @id @default(uuid())
-  name       String
-  members    TeamMember[]
-  taskGroups TaskGroup[]
+  id           String           @id @default(uuid())
+  name         String
+  members      TeamMember[]
+  taskGroups   TaskGroup[]
+  invitations  TeamInvitation[]
 
   createdAt DateTime @default(now())
 }
@@ -80,6 +81,26 @@ model TeamMember {
 
   @@unique([userId, teamId])
   @@index([teamId])
+}
+
+
+model TeamInvitation {
+  id          String   @id @default(uuid())
+  email       String
+  role        Role     @default(MEMBER)
+  tokenHash   String   @unique
+  teamId      String
+
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@index([email])
+  @@index([teamId])
+  @@index([expiresAt])
 }
 
 model TaskGroup {

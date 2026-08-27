@@ -1,0 +1,8 @@
+$kind: collection
+name: Task Management
+variables:
+  baseUrl: ""
+  accessToken: ""
+  refreshToken: ""
+  userId: ""
+  teamId: ""

@@ -1,0 +1,48 @@
+$kind: http-request
+name: Refresh Token
+url: "{{baseUrl}}/auth/refresh"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"refreshToken\": \"{{refreshToken}}\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "const response = pm.response.json();\r
+
+      \r
+
+      if (response.accessToken) {\r
+
+      \    pm.collectionVariables.set(\r
+
+      \        'accessToken',\r
+
+      \        response.accessToken,\r
+
+      \    );\r
+
+      \    console.log('New access token saved');\r
+
+      }\r
+
+      \r
+
+      if (response.refreshToken) {\r
+
+      \    pm.collectionVariables.set(\r
+
+      \        'refreshToken',\r
+
+      \        response.refreshToken,\r
+
+      \    );\r
+
+      \    console.log('New refresh token saved');\r
+
+      }"
+    language: text/javascript
+order: 4378981345222682

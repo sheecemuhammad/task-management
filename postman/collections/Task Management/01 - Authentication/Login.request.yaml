@@ -1,0 +1,58 @@
+$kind: http-request
+name: Login
+url: http://localhost:3000/auth/login
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"email\": \"sheece14@gmail.com\",\r
+
+    \  \"password\": \"TestPass@123\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "const response = pm.response.json();\r
+
+      \r
+
+      if (response.accessToken) {\r
+
+      \    pm.collectionVariables.set(\r
+
+      \        'accessToken',\r
+
+      \        response.accessToken,\r
+
+      \    );\r
+
+      }\r
+
+      \r
+
+      if (response.refreshToken) {\r
+
+      \    pm.collectionVariables.set(\r
+
+      \        'refreshToken',\r
+
+      \        response.refreshToken,\r
+
+      \    );\r
+
+      \r
+
+      \    console.log('Refresh token saved');\r
+
+      }\r
+
+      \r
+
+      if (response.accessToken) {\r
+
+      \    console.log('Access token saved');\r
+
+      }"
+    language: text/javascript
+order: 2881957439084854

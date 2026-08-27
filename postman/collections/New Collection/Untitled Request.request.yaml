@@ -1,6 +1,0 @@
-$kind: http-request
-description: ""
-url: ""
-method: GET
-examples: .resources/Untitled Request.resources/examples
-order: 1787788651836

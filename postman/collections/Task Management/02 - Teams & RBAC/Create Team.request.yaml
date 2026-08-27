@@ -1,0 +1,16 @@
+$kind: http-request
+name: Create Team
+url: "{{baseUrl}}/teams"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Engineering Team\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 1787849092591
