@@ -4,18 +4,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
-import { Role } from '@prisma/client';
 
 import { UsersRepository } from '../../users/users.repository';
+import { TeamsRepository } from './../repositories/teams.repository';
 import { TeamInvitationRepository } from '../repositories/team-invitation.repository';
 import { CreateInvitationDto } from '../dto/create-invitation.dto';
 import { MailService } from '../../mail/mail.service';
-
 
 @Injectable()
 export class TeamInvitationService {
   constructor(
     private readonly usersRepository: UsersRepository,
+    private readonly teamsRepository: TeamsRepository,
     private readonly teamInvitationRepository: TeamInvitationRepository,
     private readonly mailService: MailService,
   ) {}
@@ -33,6 +33,12 @@ export class TeamInvitationService {
     createInvitationDto: CreateInvitationDto,
   ) {
     const { email, role } = createInvitationDto;
+
+    const team = await this.teamsRepository.findById(teamId);
+
+    if (!team) {
+      throw new NotFoundException('Team not found');
+    }
 
     const user = await this.usersRepository.findByEmail(email);
 
@@ -65,10 +71,92 @@ export class TeamInvitationService {
       },
     });
 
-    return {
-      invitation,
+    await this.mailService.sendTeamInvitation(
+      email,
+      team.name,
       invitationToken,
+    );
+
+    return {
+      message: 'Invitation sent successfully',
+      invitationId: invitation.id,
       userExists: !!user,
     };
   }
+
+  async acceptInvitation(
+  token: string,
+  userId: string,
+) {
+  const tokenHash = this.hashInvitationToken(token);
+
+  const invitation =
+    await this.teamInvitationRepository.findByTokenHash(
+      tokenHash,
+    );
+
+  if (!invitation) {
+    throw new NotFoundException(
+      'Invitation not found',
+    );
+  }
+
+  if (invitation.acceptedAt) {
+    throw new ConflictException(
+      'Invitation has already been accepted',
+    );
+  }
+
+  if (invitation.expiresAt <= new Date()) {
+    throw new ConflictException(
+      'Invitation has expired',
+    );
+  }
+
+  const user =
+    await this.usersRepository.findById(userId);
+
+  if (!user) {
+    throw new NotFoundException(
+      'User not found',
+    );
+  }
+
+  if (
+    user.email.toLowerCase() !==
+    invitation.email.toLowerCase()
+  ) {
+    throw new ConflictException(
+      'This invitation belongs to a different email address',
+    );
+  }
+
+  const existingMembership =
+    await this.teamsRepository.findMembership(
+      userId,
+      invitation.teamId,
+    );
+
+  if (existingMembership) {
+    throw new ConflictException(
+      'User is already a member of this team',
+    );
+  }
+
+  await this.teamsRepository.addMember(
+    userId,
+    invitation.teamId,
+    invitation.role,
+  );
+
+  await this.teamInvitationRepository.markAccepted(
+    invitation.id,
+  );
+
+  return {
+    message: 'Invitation accepted successfully',
+    teamId: invitation.teamId,
+    role: invitation.role,
+  };
+}
 }

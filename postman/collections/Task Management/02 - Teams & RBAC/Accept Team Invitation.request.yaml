@@ -1,0 +1,9 @@
+$kind: http-request
+name: Accept Team Invitation
+url: "{{baseUrl}}/invitations/W5KtB5pwRghP1V8tUnZSnHXepooamocc7DuMM_id8zU/accept"
+method: POST
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 4136659353970901

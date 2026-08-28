@@ -6,13 +6,15 @@ import { TeamsRepository } from './repositories/teams.repository';
 import { TeamInvitationRepository } from './repositories/team-invitation.repository';
 import { TeamInvitationService } from './services/team-invitation.service';
 import { TeamInvitationController } from './controllers/team-invitation.controller';
+import { AcceptInvitationController } from './controllers/accept-invitation.controller';
 
 import { MailModule } from '../mail/mail.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [MailModule],
+  imports: [MailModule, UsersModule],
 
-  controllers: [TeamsController, TeamInvitationController],
+  controllers: [TeamsController, TeamInvitationController, AcceptInvitationController],
 
   providers: [
     TeamsService,

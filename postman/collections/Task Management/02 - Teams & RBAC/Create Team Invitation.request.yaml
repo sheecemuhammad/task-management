@@ -1,0 +1,18 @@
+$kind: http-request
+name: Create Team Invitation
+url: "{{baseUrl}}/teams/{{teamId}}/invitations"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"email\": \"ak27625282@gmail.com\",\r
+
+    \  \"role\": \"MEMBER\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 2719769350338161

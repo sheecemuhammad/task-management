@@ -1,4 +1,9 @@
 $kind: http-request
-url: ""
+name: Get Team
+url: "{{baseUrl}}/teams/{{teamId}}"
 method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
 order: 1200490927263183

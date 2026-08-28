@@ -2,64 +2,37 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
-import {
-  welcomeTemplate,
-} from './templates/welcome.template';
-
-import {
-  loginAlertTemplate,
-} from './templates/login-alert.template';
+import { welcomeTemplate } from './templates/welcome.template';
+import { loginAlertTemplate } from './templates/login-alert.template';
+import { teamInvitationTemplate } from './templates/team-invitation.template';
 
 @Injectable()
 export class MailService {
-  private readonly logger = new Logger(
-    MailService.name,
-  );
+  private readonly logger = new Logger(MailService.name);
 
   private readonly transporter: nodemailer.Transporter;
 
-  constructor(
-    private readonly configService: ConfigService,
-  ) {
-    this.transporter =
-      nodemailer.createTransport({
-        host: this.configService.get<string>(
-          'mail.host',
-        ),
+  constructor(private readonly configService: ConfigService) {
+    this.transporter = nodemailer.createTransport({
+      host: this.configService.get<string>('mail.host'),
 
-        port: this.configService.get<number>(
-          'mail.port',
-        ),
+      port: this.configService.get<number>('mail.port'),
 
-        secure:
-          this.configService.get<boolean>(
-            'mail.secure',
-          ) ?? false,
+      secure: this.configService.get<boolean>('mail.secure') ?? false,
 
-        auth: {
-          user:
-            this.configService.get<string>(
-              'mail.user',
-            ),
+      auth: {
+        user: this.configService.get<string>('mail.user'),
 
-          pass:
-            this.configService.get<string>(
-              'mail.password',
-            ),
-        },
-      });
+        pass: this.configService.get<string>('mail.password'),
+      },
+    });
   }
 
-  async sendWelcomeEmail(
-    email: string,
-    name: string,
-  ) {
+  async sendWelcomeEmail(email: string, name: string) {
     const html = welcomeTemplate(name);
 
     await this.transporter.sendMail({
-      from: this.configService.get<string>(
-        'mail.from',
-      ),
+      from: this.configService.get<string>('mail.from'),
 
       to: email,
 
@@ -69,20 +42,39 @@ export class MailService {
     });
   }
 
-  async sendLoginSecurityAlert(
-    email: string,
-    name: string,
-  ) {
+  async sendLoginSecurityAlert(email: string, name: string) {
     const html = loginAlertTemplate(name);
 
     await this.transporter.sendMail({
-      from: this.configService.get<string>(
-        'mail.from',
-      ),
+      from: this.configService.get<string>('mail.from'),
 
       to: email,
 
       subject: 'New Login to Your Account',
+
+      html,
+    });
+  }
+
+  async sendTeamInvitation(
+    email: string,
+    teamName: string,
+    invitationToken: string,
+  ) {
+    const frontendUrl =
+      this.configService.get<string>('app.frontendUrl') ??
+      'http://localhost:3000';
+
+    const invitationUrl = `${frontendUrl}/invitations/${invitationToken}`;
+
+    const html = teamInvitationTemplate(teamName, invitationUrl);
+
+    await this.transporter.sendMail({
+      from: this.configService.get<string>('mail.from'),
+
+      to: email,
+
+      subject: `Invitation to join ${teamName}`,
 
       html,
     });

@@ -77,4 +77,18 @@ export class TeamsRepository {
       },
     });
   }
+  
+  async addMember(
+  userId: string,
+  teamId: string,
+  role: Role,
+) {
+  return this.prisma.teamMember.create({
+    data: {
+      userId,
+      teamId,
+      role,
+    },
+  });
+}
 }
