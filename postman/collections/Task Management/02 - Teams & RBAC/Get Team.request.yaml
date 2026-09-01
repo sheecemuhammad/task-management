@@ -2,6 +2,9 @@ $kind: http-request
 name: Get Team
 url: "{{baseUrl}}/teams/{{teamId}}"
 method: GET
+body:
+  type: json
+  content: ""
 auth:
   type: bearer
   credentials:

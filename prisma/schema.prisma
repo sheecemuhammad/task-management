@@ -60,11 +60,11 @@ model OAuthAccount {
 }
 
 model Team {
-  id           String           @id @default(uuid())
-  name         String
-  members      TeamMember[]
-  taskGroups   TaskGroup[]
-  invitations  TeamInvitation[]
+  id          String           @id @default(uuid())
+  name        String
+  members     TeamMember[]
+  taskGroups  TaskGroup[]
+  invitations TeamInvitation[]
 
   createdAt DateTime @default(now())
 }
@@ -79,28 +79,74 @@ model TeamMember {
   team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId String
 
+  permissions TeamMemberPermission[]
+
   @@unique([userId, teamId])
   @@index([teamId])
 }
 
-
 model TeamInvitation {
-  id          String   @id @default(uuid())
-  email       String
-  role        Role     @default(MEMBER)
-  tokenHash   String   @unique
-  teamId      String
+  id        String @id @default(uuid())
+  email     String
+  role      Role   @default(MEMBER)
+  tokenHash String @unique
+  teamId    String
 
-  expiresAt   DateTime
-  acceptedAt  DateTime?
+  expiresAt  DateTime
+  acceptedAt DateTime?
 
-  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([email])
   @@index([teamId])
   @@index([expiresAt])
+}
+
+model Feature {
+  id          String  @id @default(uuid())
+  name        String
+  key         String  @unique
+  description String?
+
+  permissions Permission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Permission {
+  id          String  @id @default(uuid())
+  name        String
+  key         String  @unique
+  description String?
+
+  feature   Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  featureId String
+
+  teamMembers TeamMemberPermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([featureId])
+}
+
+model TeamMemberPermission {
+  id String @id @default(uuid())
+
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  teamMemberId String
+
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  permissionId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([teamMemberId, permissionId])
+  @@index([teamMemberId])
+  @@index([permissionId])
 }
 
 model TaskGroup {

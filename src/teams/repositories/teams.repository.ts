@@ -6,10 +6,7 @@ import { Role } from '@prisma/client';
 export class TeamsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createTeamWithOwner(
-    name: string,
-    userId: string,
-  ) {
+  async createTeamWithOwner(name: string, userId: string) {
     return this.prisma.team.create({
       data: {
         name,
@@ -64,10 +61,7 @@ export class TeamsRepository {
     });
   }
 
-  async findMembership(
-    userId: string,
-    teamId: string,
-  ) {
+  async findMembership(userId: string, teamId: string) {
     return this.prisma.teamMember.findUnique({
       where: {
         userId_teamId: {
@@ -77,18 +71,23 @@ export class TeamsRepository {
       },
     });
   }
-  
-  async addMember(
-  userId: string,
-  teamId: string,
-  role: Role,
-) {
-  return this.prisma.teamMember.create({
-    data: {
-      userId,
-      teamId,
-      role,
-    },
-  });
-}
+
+  async findTeamMemberById(teamMemberId: string, teamId: string) {
+    return this.prisma.teamMember.findFirst({
+      where: {
+        id: teamMemberId,
+        teamId,
+      },
+    });
+  }
+
+  async addMember(userId: string, teamId: string, role: Role) {
+    return this.prisma.teamMember.create({
+      data: {
+        userId,
+        teamId,
+        role,
+      },
+    });
+  }
 }
