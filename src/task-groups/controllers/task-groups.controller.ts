@@ -25,7 +25,7 @@ export class TaskGroupsController {
   ) {}
 
   @Post(':teamId/task-groups')
-  @Permissions('task-group:create')
+  @Permissions('task_group:create')
   async create(
     @Param('teamId') teamId: string,
     @Body() createTaskGroupDto: CreateTaskGroupDto,
@@ -37,7 +37,7 @@ export class TaskGroupsController {
   }
 
   @Get(':teamId/task-groups')
-  @Permissions('task-group:view')
+  @Permissions('task_group:view')
   async findAll(
     @Param('teamId') teamId: string,
   ) {
@@ -45,7 +45,7 @@ export class TaskGroupsController {
   }
 
   @Get(':teamId/task-groups/:groupId')
-  @Permissions('task-group:view')
+  @Permissions('task_group:view')
   async findById(
     @Param('teamId') teamId: string,
     @Param('groupId') groupId: string,
@@ -57,7 +57,7 @@ export class TaskGroupsController {
   }
 
   @Patch(':teamId/task-groups/:groupId')
-  @Permissions('task-group:update')
+  @Permissions('task_group:update')
   async update(
     @Param('teamId') teamId: string,
     @Param('groupId') groupId: string,
@@ -71,7 +71,7 @@ export class TaskGroupsController {
   }
 
   @Delete(':teamId/task-groups/:groupId')
-  @Permissions('task-group:delete')
+  @Permissions('task_group:delete')
   async delete(
     @Param('teamId') teamId: string,
     @Param('groupId') groupId: string,

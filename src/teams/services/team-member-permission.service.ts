@@ -3,7 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Role } from '@prisma/client';
+
+import { SystemRole, TeamRole } from '../../lib/shared/enums/role.enum';
 
 import { TeamsRepository } from '../repositories/teams.repository';
 import { TeamMemberPermissionRepository } from '../repositories/team-member-permission.repository';
@@ -22,60 +23,71 @@ export class TeamMemberPermissionService {
     targetMemberId: string,
     dto: UpdateMemberPermissionsDto,
   ) {
+    // Check whether the requester belongs to the team.
     const requester = await this.teamsRepository.findMembership(
       requesterUserId,
       teamId,
     );
 
-    if (!requester) {
-      throw new ForbiddenException('You are not a member of this team');
+    // Global OWNER can access the team even without membership.
+    const requesterUser = await this.teamsRepository.findUserById(
+      requesterUserId,
+    );
+
+    if (!requesterUser) {
+      throw new NotFoundException('Requester user not found');
     }
 
-    if (requester.role === Role.MEMBER) {
+    const isGlobalOwner =
+      requesterUser.systemRole === SystemRole.OWNER;
+
+    if (!isGlobalOwner && !requester) {
+      throw new ForbiddenException(
+        'You are not a member of this team',
+      );
+    }
+
+    // Normal users must be ADMINs of this team.
+    if (!isGlobalOwner && requester?.role !== TeamRole.ADMIN) {
       throw new ForbiddenException(
         'You do not have permission to manage member permissions',
       );
     }
 
-    const targetMember = await this.teamsRepository.findTeamMemberById(
-      targetMemberId,
-      teamId,
-    );
+    // Target member must belong to this same team.
+    const targetMember =
+      await this.teamsRepository.findTeamMemberById(
+        targetMemberId,
+        teamId,
+      );
 
     if (!targetMember) {
-      throw new NotFoundException('Target team member not found');
+      throw new NotFoundException(
+        'Target team member not found',
+      );
     }
 
-    const requestedPermissionIds = [...new Set(dto.permissionIds)];
+    // Remove duplicate permission IDs.
+    const requestedPermissionIds = [
+      ...new Set(dto.permissionIds),
+    ];
 
-    const requesterPermissions =
-      await this.teamMemberPermissionRepository.findByTeamMember(requester.id);
-
-    const requesterPermissionIds = new Set(
-      requesterPermissions.map((item) => item.permissionId),
-    );
-
+    // Verify that every requested permission actually exists.
     const permissions =
       await this.teamMemberPermissionRepository.findPermissionsByIds(
         requestedPermissionIds,
       );
 
-    if (permissions.length !== requestedPermissionIds.length) {
-      throw new NotFoundException('One or more permissions were not found');
-    }
-
-    if (requester.role === Role.ADMIN) {
-      const canAssignAll = requestedPermissionIds.every((permissionId) =>
-        requesterPermissionIds.has(permissionId),
+    if (
+      permissions.length !==
+      requestedPermissionIds.length
+    ) {
+      throw new NotFoundException(
+        'One or more permissions were not found',
       );
-
-      if (!canAssignAll) {
-        throw new ForbiddenException(
-          'An admin cannot assign permissions they do not have',
-        );
-      }
     }
 
+    // Replace the target member's permissions atomically.
     await this.teamMemberPermissionRepository.replacePermissions(
       targetMember.id,
       requestedPermissionIds,

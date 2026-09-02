@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Development Tasks\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 1788391061864

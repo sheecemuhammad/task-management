@@ -1,28 +1,15 @@
 $kind: http-request
-name: Register
 url: http://localhost:3000/users
 method: POST
 body:
   type: json
-  content: "// {\r
+  content: "{\r
 
-    //   \"name\": \"Team Invitation Test User\",\r
+    \  \"name\": \"Cross Team User\",\r
 
-    //   \"email\": \"ak27625282@gmail.com\",\r
+    \  \"email\": \"ak27625282@gmail.com\",\r
 
-    //   \"password\": \"TestPass@123\"\r
-
-    // }\r
-
-    \r
-
-    {\r
-
-    \  \"name\": \"RBAC Admin\",\r
-
-    \  \"email\": \"rbac.admin@example.com\",\r
-
-    \  \"password\": \"Admin@12345\"\r
+    \  \"password\": \"Member@123456\"\r
 
     }"
 order: 1787847410941

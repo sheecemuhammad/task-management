@@ -5,3 +5,7 @@ variables:
   refreshToken: ""
   userId: ""
   teamId: ""
+  teamAId: ""
+  teamBId: ""
+  user4TeamAMemberId: ""
+  user4TeamBMemberId: ""

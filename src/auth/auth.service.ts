@@ -65,6 +65,7 @@ export class AuthService {
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
+      systemRole: user.systemRole,
     });
 
     const refreshToken = this.generateRefreshToken();
@@ -125,6 +126,7 @@ export class AuthService {
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
+      systemRole: user.systemRole,
     });
 
     const newRefreshToken = this.generateRefreshToken();
@@ -271,6 +273,7 @@ export class AuthService {
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
+      systemRole: user.systemRole,
     });
 
     // Generate application refresh token.
@@ -390,6 +393,7 @@ export class AuthService {
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
+      systemRole: user.systemRole,
     });
 
     // Generate application refresh token.

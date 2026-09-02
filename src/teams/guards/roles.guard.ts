@@ -5,8 +5,8 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from '@prisma/client';
 
+import { SystemRole, TeamRole } from '../../lib/shared/enums/role.enum';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { TeamsRepository } from '../repositories/teams.repository';
 
@@ -21,7 +21,7 @@ export class RolesGuard implements CanActivate {
     context: ExecutionContext,
   ): Promise<boolean> {
     const requiredRoles =
-      this.reflector.getAllAndOverride<Role[]>(
+      this.reflector.getAllAndOverride<TeamRole[]>(
         ROLES_KEY,
         [
           context.getHandler(),
@@ -39,7 +39,8 @@ export class RolesGuard implements CanActivate {
     const request =
       context.switchToHttp().getRequest();
 
-    const userId = request.user?.userId;
+    const user = request.user;
+    const userId = user?.userId;
     const teamId = request.params?.teamId;
 
     if (!userId || !teamId) {
@@ -48,6 +49,12 @@ export class RolesGuard implements CanActivate {
       );
     }
 
+    // Global OWNER has access to all teams.
+    if (user.systemRole === SystemRole.OWNER) {
+      return true;
+    }
+
+    // Normal users must belong to the requested team.
     const membership =
       await this.teamsRepository.findMembership(
         userId,
@@ -60,6 +67,7 @@ export class RolesGuard implements CanActivate {
       );
     }
 
+    // Check the user's team-level role.
     if (!requiredRoles.includes(membership.role)) {
       throw new ForbiddenException(
         'You do not have the required role',

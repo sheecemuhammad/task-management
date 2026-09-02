@@ -13,8 +13,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
+enum SystemRole {
   OWNER
+  USER
+}
+
+enum TeamRole {
   ADMIN
   MEMBER
 }
@@ -27,11 +31,12 @@ enum TaskStatus {
 }
 
 model User {
-  id        String  @id @default(uuid())
-  email     String  @unique
-  password  String?
-  name      String
-  avatarUrl String?
+  id         String     @id @default(uuid())
+  email      String     @unique
+  password   String?
+  name       String
+  avatarUrl  String?
+  systemRole SystemRole @default(USER)
 
   teamMembers     TeamMember[]
   taskAssignments TaskAssignee[]
@@ -70,8 +75,8 @@ model Team {
 }
 
 model TeamMember {
-  id   String @id @default(uuid())
-  role Role   @default(MEMBER)
+  id   String   @id @default(uuid())
+  role TeamRole @default(MEMBER)
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
@@ -86,10 +91,10 @@ model TeamMember {
 }
 
 model TeamInvitation {
-  id        String @id @default(uuid())
+  id        String   @id @default(uuid())
   email     String
-  role      Role   @default(MEMBER)
-  tokenHash String @unique
+  role      TeamRole @default(MEMBER)
+  tokenHash String   @unique
   teamId    String
 
   expiresAt  DateTime

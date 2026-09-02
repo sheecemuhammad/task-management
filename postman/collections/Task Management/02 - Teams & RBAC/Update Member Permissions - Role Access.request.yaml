@@ -1,6 +1,5 @@
 $kind: http-request
-name: Update Member Permissions - Role Access
-url: "{{baseUrl}}/teams/c37668e5-0725-4db2-8065-58e38ce75b13/members/602e129d-b0d7-490b-ac72-c762e978e795/permissions"
+url: "{{baseUrl}}/teams/{{teamBId}}/members/{{user4TeamBMemberId}}/permissions"
 method: PUT
 body:
   type: json

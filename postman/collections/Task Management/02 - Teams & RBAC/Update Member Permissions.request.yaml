@@ -1,28 +1,13 @@
 $kind: http-request
-name: Update Member Permissions
-url: "{{baseUrl}}/teams/c37668e5-0725-4db2-8065-58e38ce75b13/members/602e129d-b0d7-490b-ac72-c762e978e795/permissions"
+url: "{{baseUrl}}/teams/{{teamBId}}/members/{{user4TeamBMemberId}}/permissions"
 method: PUT
 body:
   type: json
-  content: "// {\r
-
-    //   \"permissionIds\": [\r
-
-    //     \"0336fc0e-667f-4db6-8971-3257909e48d6\",\r
-
-    //     \"32f7951c-cfc3-431f-b2c9-90dc16f1cb50\"\r
-
-    //   ]\r
-
-    // }\r
-
-    \r
-
-    {\r
+  content: "{\r
 
     \  \"permissionIds\": [\r
 
-    \    \"0336fc0e-667f-4db6-8971-3257909e48d6\"\r
+    \    \"6dfba3ee-5cbf-4428-8a34-1135300b6c95\"\r
 
     \  ]\r
 

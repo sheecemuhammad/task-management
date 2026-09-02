@@ -1,6 +1,5 @@
 $kind: http-request
-name: Create Team Invitation
-url: "{{baseUrl}}/teams/{{teamId}}/invitations"
+url: "{{baseUrl}}/teams/{{teamBId}}/invitations"
 method: POST
 body:
   type: json

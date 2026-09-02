@@ -1,14 +1,9 @@
 $kind: http-request
-name: Create Team
 url: "{{baseUrl}}/teams"
 method: POST
 body:
   type: json
-  content: "{\r
-
-    \  \"name\": \"Engineering Team\"\r
-
-    }"
+  content: "{\r\n  \"name\": \"Team B\"\r\n}"
 auth:
   type: bearer
   credentials:

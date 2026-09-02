@@ -1,11 +1,8 @@
 $kind: http-request
-url: "{{baseUrl}}/teams/{{teamBId}}"
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups"
 method: GET
-body:
-  type: json
-  content: ""
 auth:
   type: bearer
   credentials:
     token: "{{accessToken}}"
-order: 1200490927263183
+order: 2945212785347728

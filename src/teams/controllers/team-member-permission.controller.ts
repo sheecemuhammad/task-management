@@ -7,16 +7,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { Role } from '@prisma/client';
+import { TeamRole } from '../../lib/shared/enums/role.enum';
 import { Roles } from '../decorators/roles.decorator';
 import { RolesGuard } from '../guards/roles.guard';
-
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-
 import { TeamMemberPermissionService } from '../services/team-member-permission.service';
-
 import { UpdateMemberPermissionsDto } from '../dto/update-member-permissions.dto';
-
 
 @Controller('teams')
 @UseGuards(JwtAuthGuard)
@@ -26,8 +22,8 @@ export class TeamMemberPermissionController {
   ) {}
 
   @Put(':teamId/members/:memberId/permissions')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.OWNER, Role.ADMIN)
+  @UseGuards(RolesGuard)
+  @Roles(TeamRole.ADMIN)
   async updatePermissions(
     @Param('teamId') teamId: string,
     @Param('memberId') memberId: string,

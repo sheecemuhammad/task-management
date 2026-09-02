@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Role } from '@prisma/client';
+import { TeamRole } from '../../lib/shared/enums/role.enum';
 
 @Injectable()
 export class TeamsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createTeamWithOwner(name: string, userId: string) {
+  async createTeamWithAdmin(name: string, userId: string) {
     return this.prisma.team.create({
       data: {
         name,
@@ -14,7 +14,7 @@ export class TeamsRepository {
         members: {
           create: {
             userId,
-            role: Role.OWNER,
+            role: TeamRole.ADMIN,
           },
         },
       },
@@ -71,6 +71,17 @@ export class TeamsRepository {
       },
     });
   }
+  async findUserById(userId: string) {
+    return this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      select: {
+        id: true,
+        systemRole: true,
+      },
+    });
+  }
 
   async findTeamMemberById(teamMemberId: string, teamId: string) {
     return this.prisma.teamMember.findFirst({
@@ -81,11 +92,22 @@ export class TeamsRepository {
     });
   }
 
-  async addMember(userId: string, teamId: string, role: Role) {
+  async addMember(userId: string, teamId: string, role: TeamRole) {
     return this.prisma.teamMember.create({
       data: {
         userId,
         teamId,
+        role,
+      },
+    });
+  }
+  async updateMemberRole(memberId: string, teamId: string, role: TeamRole) {
+    return this.prisma.teamMember.updateMany({
+      where: {
+        id: memberId,
+        teamId,
+      },
+      data: {
         role,
       },
     });

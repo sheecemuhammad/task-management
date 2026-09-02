@@ -3,13 +3,13 @@ import {
   IsEnum,
   IsNotEmpty,
 } from 'class-validator';
-import { Role } from '@prisma/client';
+import { TeamRole } from '../../lib/shared/enums/role.enum';
 
 export class CreateInvitationDto {
   @IsEmail()
   @IsNotEmpty()
   email!: string;
 
-  @IsEnum(Role)
-  role!: Role;
+  @IsEnum(TeamRole)
+  role!: TeamRole;
 }

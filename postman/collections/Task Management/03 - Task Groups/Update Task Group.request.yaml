@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups/4975eb26-ba8e-4f0c-ac4f-5b792508a056"
+method: PATCH
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Updated Development Tasks\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 4502836632676736

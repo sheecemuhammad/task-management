@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups/4975eb26-ba8e-4f0c-ac4f-5b792508a056"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 4501822853280861
