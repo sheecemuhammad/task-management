@@ -1,5 +1,4 @@
 $kind: collection
-name: Task Management
 variables:
   baseUrl: ""
   accessToken: ""

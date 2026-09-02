@@ -1,4 +1,9 @@
 $kind: http-request
-url: ""
+name: Get Features & Permissions
+url: "{{baseUrl}}/teams/features/permissions"
 method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
 order: 4501463151397425

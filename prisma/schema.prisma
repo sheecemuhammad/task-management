@@ -34,7 +34,7 @@ model User {
   avatarUrl String?
 
   teamMembers     TeamMember[]
-  tasksAssigned   Task[]           @relation("TaskAssignee")
+  taskAssignments TaskAssignee[]
   comments        Comment[]
   auditLogs       AuditLog[]
   refreshSessions RefreshSession[]
@@ -158,8 +158,9 @@ model TaskGroup {
 
   tasks Task[]
 
-  shareToken String? @unique
-  isPublic   Boolean @default(false)
+  shareTokenHash String?   @unique
+  shareExpiresAt DateTime?
+  isPublic       Boolean   @default(false)
 
   createdAt DateTime @default(now())
 
@@ -176,22 +177,35 @@ model Task {
   taskGroup TaskGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId   String
 
-  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  assigneeId String?
+  assignees TaskAssignee[]
 
   attachments Attachment[]
   comments    Comment[]
 
   dueDate DateTime?
 
-  shareToken String? @unique
+  shareTokenHash String?   @unique
+  shareExpiresAt DateTime?
+  isPublic       Boolean   @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([groupId])
-  @@index([assigneeId])
   @@index([dueDate])
+}
+
+model TaskAssignee {
+  taskId String
+  userId String
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([taskId, userId])
+  @@index([userId])
 }
 
 model Comment {
