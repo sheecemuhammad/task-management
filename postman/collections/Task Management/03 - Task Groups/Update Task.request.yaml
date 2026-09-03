@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups/{{groupId}}/tasks/73bf53d7-3691-41b7-941a-b1f9c03af1de"
+method: PATCH
+body:
+  type: json
+  content: "{\r
+
+    \  \"title\": \"Implement OAuth Integration\",\r
+
+    \  \"description\": \"Complete Google and GitHub OAuth integration\",\r
+
+    \  \"status\": \"IN_PROGRESS\",\r
+
+    \  \"priority\": 2\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 4503492028961148

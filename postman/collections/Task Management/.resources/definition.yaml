@@ -9,3 +9,4 @@ variables:
   teamBId: ""
   user4TeamAMemberId: ""
   user4TeamBMemberId: ""
+  groupId: ""

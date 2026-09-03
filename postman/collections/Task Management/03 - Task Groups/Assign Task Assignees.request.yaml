@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups/{{groupId}}/tasks/73bf53d7-3691-41b7-941a-b1f9c03af1de/assignees"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \  \"assigneeIds\": [\r
+
+    \    \"f2baeacc-68b1-4fdf-baa4-a3af437f2b69\"\r
+
+    \  ]\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 4503598628932758

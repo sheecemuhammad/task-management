@@ -1,15 +1,15 @@
 $kind: http-request
-url: "{{baseUrl}}/teams/{{teamBId}}/task-groups"
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups/{{groupId}}/tasks"
 method: POST
 body:
   type: json
   content: "{\r
 
-    \  \"name\": \"Backend Tasks\"\r
+    \  \"title\": \"Test Team Isolation\"\r
 
     }"
 auth:
   type: bearer
   credentials:
     token: "{{accessToken}}"
-order: 1788391061864
+order: 4503176248357219
