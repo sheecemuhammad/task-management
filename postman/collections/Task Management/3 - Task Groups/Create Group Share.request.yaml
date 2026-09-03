@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups/{{groupId}}/share"
+method: POST
+body:
+  type: json
+  content: "{\r\n  \"expiresInDays\": 2\r\n}"
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 4503599595990679

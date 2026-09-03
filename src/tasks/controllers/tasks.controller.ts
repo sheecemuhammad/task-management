@@ -16,6 +16,7 @@ import { TasksService } from '../services/tasks.service';
 import { CreateTaskDto } from '../dto/create-task.dto';
 import { UpdateTaskDto } from '../dto/update-task.dto';
 import { AssignTaskDto } from '../dto/assign-task.dto';
+import { CreateShareDto } from '../dto/create-share.dto';
 
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../teams/guards/permissions.guard';
@@ -80,6 +81,32 @@ export class TasksController {
       taskId,
       assignTaskDto,
     );
+  }
+
+  @Post(':teamId/task-groups/:groupId/tasks/:taskId/share')
+  @Permissions('task:update')
+  async createShare(
+    @Param('teamId', ParseUUIDPipe) teamId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Body() createShareDto: CreateShareDto,
+  ) {
+    return this.tasksService.createShare(
+      teamId,
+      groupId,
+      taskId,
+      createShareDto,
+    );
+  }
+
+  @Delete(':teamId/task-groups/:groupId/tasks/:taskId/share')
+  @Permissions('task:update')
+  async revokeShare(
+    @Param('teamId', ParseUUIDPipe) teamId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+  ) {
+    return this.tasksService.revokeShare(teamId, groupId, taskId);
   }
 
   @Delete(':teamId/task-groups/:groupId/tasks/:taskId')

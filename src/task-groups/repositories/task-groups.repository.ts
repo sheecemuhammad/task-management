@@ -74,6 +74,58 @@ export class TaskGroupsRepository {
     });
   }
 
+  async setShareToken(groupId: string, tokenHash: string, expiresAt: Date) {
+    return this.prisma.taskGroup.update({
+      where: { id: groupId },
+      data: {
+        shareTokenHash: tokenHash,
+        shareExpiresAt: expiresAt,
+        isPublic: true,
+      },
+    });
+  }
+
+  async findByShareTokenHash(tokenHash: string) {
+    return this.prisma.taskGroup.findFirst({
+      where: {
+        shareTokenHash: tokenHash,
+        isPublic: true,
+      },
+      include: {
+        tasks: {
+          include: {
+            assignees: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
+            attachments: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
+    });
+  }
+
+  async revokeShareToken(groupId: string) {
+    return this.prisma.taskGroup.update({
+      where: { id: groupId },
+      data: {
+        shareTokenHash: null,
+        shareExpiresAt: null,
+        isPublic: false,
+      },
+    });
+  }
+
   async delete(groupId: string) {
     return this.prisma.taskGroup.delete({
       where: {

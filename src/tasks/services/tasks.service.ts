@@ -4,6 +4,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 
+import {
+  generateShareToken,
+  hashShareToken,
+} from '../../common/utils/share-token.util';
+
 import { TaskStatus } from '@prisma/client';
 
 import { TasksRepository } from '../repositories/tasks.repositories';
@@ -11,6 +16,7 @@ import { TasksRepository } from '../repositories/tasks.repositories';
 import { CreateTaskDto } from '../dto/create-task.dto';
 import { UpdateTaskDto } from '../dto/update-task.dto';
 import { AssignTaskDto } from '../dto/assign-task.dto';
+import { CreateShareDto } from '../dto/create-share.dto';
 
 @Injectable()
 export class TasksService {
@@ -127,6 +133,68 @@ export class TasksService {
     }
 
     return this.tasksRepository.replaceAssignees(taskId, requestedUserIds);
+  }
+
+  async createShare(
+    teamId: string,
+    groupId: string,
+    taskId: string,
+    createShareDto: CreateShareDto,
+  ) {
+    await this.findById(teamId, groupId, taskId);
+
+    const token = generateShareToken();
+    const tokenHash = hashShareToken(token);
+
+    const expiresInDays = createShareDto.expiresInDays ?? 7;
+
+    const expiresAt = new Date();
+
+    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+
+    await this.tasksRepository.setShareToken(taskId, tokenHash, expiresAt);
+
+    return {
+      token,
+      expiresAt,
+    };
+  }
+
+  async revokeShare(teamId: string, groupId: string, taskId: string) {
+    await this.findById(teamId, groupId, taskId);
+
+    return this.tasksRepository.revokeShareToken(taskId);
+  }
+
+  async getPublicTask(token: string) {
+    const tokenHash = hashShareToken(token);
+
+    const task = await this.tasksRepository.findByShareTokenHash(tokenHash);
+
+    if (!task) {
+      throw new NotFoundException('Shared task not found');
+    }
+
+    if (!task.shareExpiresAt || task.shareExpiresAt <= new Date()) {
+      throw new NotFoundException('Share link has expired');
+    }
+
+    return {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      dueDate: task.dueDate,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+      taskGroup: {
+        id: task.taskGroup.id,
+        name: task.taskGroup.name,
+      },
+      assignees: task.assignees,
+      attachments: task.attachments,
+    };
   }
 
   async delete(teamId: string, groupId: string, taskId: string) {

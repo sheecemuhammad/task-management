@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups/{{groupId}}/tasks/73bf53d7-3691-41b7-941a-b1f9c03af1de/attachments/52f59655-f47e-4981-a00b-71046084769f"
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 3121820063700470

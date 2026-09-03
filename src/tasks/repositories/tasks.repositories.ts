@@ -197,6 +197,52 @@ export class TasksRepository {
     });
   }
 
+  async setShareToken(taskId: string, tokenHash: string, expiresAt: Date) {
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        shareTokenHash: tokenHash,
+        shareExpiresAt: expiresAt,
+        isPublic: true,
+      },
+    });
+  }
+
+  async findByShareTokenHash(tokenHash: string) {
+    return this.prisma.task.findFirst({
+      where: {
+        shareTokenHash: tokenHash,
+        isPublic: true,
+      },
+      include: {
+        taskGroup: true,
+        assignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+        attachments: true,
+      },
+    });
+  }
+
+  async revokeShareToken(taskId: string) {
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        shareTokenHash: null,
+        shareExpiresAt: null,
+        isPublic: false,
+      },
+    });
+  }
+
   async delete(taskId: string) {
     return this.prisma.task.delete({
       where: {

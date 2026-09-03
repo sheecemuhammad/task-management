@@ -52,6 +52,7 @@ import { TeamMemberPermissionController } from './controllers/team-member-permis
     TeamMemberPermissionRepository,
     FeatureService,
     FeatureRepository,
+    PermissionsGuard,
   ],
 })
 export class TeamsModule {}

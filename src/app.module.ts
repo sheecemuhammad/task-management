@@ -9,6 +9,8 @@ import { MailModule } from './mail/mail.module';
 import { TeamsModule } from './teams/teams.module';
 import { TaskGroupsModule } from './task-groups/task-groups.module';
 import { TasksModule } from './tasks/tasks.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { AttachmentsModule } from './attachments/attachments.module';
 import appConfig from './lib/shared/config/app.config';
 import databaseConfig from './lib/shared/config/database.config';
 import authConfig from './lib/shared/config/auth.config';
@@ -28,6 +30,8 @@ import mailConfig from './lib/shared/config/mail.config';
     TeamsModule,
     TaskGroupsModule,
     TasksModule,
+    CloudinaryModule,
+    AttachmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
