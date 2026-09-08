@@ -1,0 +1,10 @@
+$kind: socket.io-request
+description: ""
+url: "{{baseUrl}}"
+events:
+  - name: comment:deleted
+    description: ""
+    subscribeOnConnect: true
+settings: {}
+messages: .resources/Comment Deleted.resources/messages
+order: 4503491045784279

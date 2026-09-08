@@ -5,11 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class CommentsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findTaskInTeam(
-    taskId: string,
-    groupId: string,
-    teamId: string,
-  ) {
+  async findTaskInTeam(taskId: string, groupId: string, teamId: string) {
     return this.prisma.task.findFirst({
       where: {
         id: taskId,
@@ -21,10 +17,24 @@ export class CommentsRepository {
     });
   }
 
-  async findParentComment(
-    parentId: string,
-    taskId: string,
-  ) {
+  // Used by WebSocket room authorization
+  async findTaskWithTeam(taskId: string) {
+    return this.prisma.task.findUnique({
+      where: {
+        id: taskId,
+      },
+      select: {
+        id: true,
+        taskGroup: {
+          select: {
+            teamId: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findParentComment(parentId: string, taskId: string) {
     return this.prisma.comment.findFirst({
       where: {
         id: parentId,
@@ -80,10 +90,7 @@ export class CommentsRepository {
     });
   }
 
-  async findByIdAndTask(
-    commentId: string,
-    taskId: string,
-  ) {
+  async findByIdAndTask(commentId: string, taskId: string) {
     return this.prisma.comment.findFirst({
       where: {
         id: commentId,
@@ -102,10 +109,7 @@ export class CommentsRepository {
     });
   }
 
-  async update(
-    commentId: string,
-    content: string,
-  ) {
+  async update(commentId: string, content: string) {
     return this.prisma.comment.update({
       where: {
         id: commentId,

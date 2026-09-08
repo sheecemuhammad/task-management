@@ -1,0 +1,11 @@
+$kind: socket.io-message
+eventName: leaveTask
+acknowledgement: true
+args:
+  - content: "{\r
+
+      \  \"taskId\": \"73bf53d7-3691-41b7-941a-b1f9c03af1de\"\r
+
+      }"
+    contentType: json
+order: 1788884820592

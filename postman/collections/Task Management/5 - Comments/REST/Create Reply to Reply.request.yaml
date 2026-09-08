@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups/{{groupId}}/tasks/{{taskId}}/comments"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"content\": \"This is a reply to the reply.\",\r
+
+    \  \"parentId\": \"56a1e047-583f-466f-a18e-53693710b4b2\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 4495616881741277

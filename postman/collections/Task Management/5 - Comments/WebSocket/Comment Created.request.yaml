@@ -1,0 +1,10 @@
+$kind: socket.io-request
+description: ""
+url: "{{baseUrl}}"
+events:
+  - name: comment:created
+    description: ""
+    subscribeOnConnect: true
+settings: {}
+messages: .resources/Comment Created.resources/messages
+order: 4503318655824943

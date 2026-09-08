@@ -1,0 +1,12 @@
+$kind: socket.io-request
+description: ""
+url: "{{baseUrl}}"
+headers:
+  Authorization: Bearer {{accessToken}}
+events:
+  - name: joinTask
+    description: ""
+    subscribeOnConnect: false
+settings: {}
+messages: .resources/Join Task Room.resources/messages
+order: 4501299413456871

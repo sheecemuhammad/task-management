@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups/{{groupId}}/tasks/{{taskId}}/comments"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 584523778230245

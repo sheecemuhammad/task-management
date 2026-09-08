@@ -1,0 +1,10 @@
+$kind: socket.io-request
+description: ""
+url: "{{baseUrl}}"
+events:
+  - name: leaveTask
+    description: ""
+    subscribeOnConnect: false
+settings: {}
+messages: .resources/Leave Task Room.resources/messages
+order: 4502070012572276

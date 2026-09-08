@@ -1,0 +1,16 @@
+$kind: http-request
+name: Ownership/Security
+url: "{{baseUrl}}/teams/{{teamBId}}/task-groups/{{groupId}}/tasks/{{taskId}}/comments/d5a8416f-ce16-4e5d-a99b-dc2a98ce6118"
+method: PATCH
+body:
+  type: json
+  content: "{\r
+
+    \  \"content\": \"I am trying to modify someone else's comment.\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 4497853430015398

@@ -16,10 +16,7 @@ import { GoogleAuthGuard } from './guards/google-auth.guard';
 
 import { GithubStrategy } from './strategies/github.strategy';
 
-import {
-  ConfigModule,
-  ConfigService,
-} from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { RefreshSessionRepository } from './repositories/refresh-session.repository';
 
@@ -38,27 +35,18 @@ import { StringValue } from 'ms';
 
       inject: [ConfigService],
 
-      useFactory: (
-        configService: ConfigService,
-      ) => ({
-        secret: configService.get<string>(
-          'auth.jwtSecret',
-        ),
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('auth.jwtSecret'),
 
         signOptions: {
-          expiresIn: (
-            configService.get<string>(
-              'auth.accessTokenExpiresIn',
-            ) ?? '15m'
-          ) as StringValue,
+          expiresIn: (configService.get<string>('auth.accessTokenExpiresIn') ??
+            '15m') as StringValue,
         },
       }),
     }),
   ],
 
-  controllers: [
-    AuthController,
-  ],
+  controllers: [AuthController],
 
   providers: [
     AuthService,
@@ -74,5 +62,7 @@ import { StringValue } from 'ms';
     RefreshSessionRepository,
     OAuthAccountRepository,
   ],
+
+  exports: [JwtModule],
 })
 export class AuthModule {}
