@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { TeamRole } from '../../lib/shared/enums/role.enum';
+import { TeamRole } from '../../common/enums/role.enum';
 
 @Injectable()
 export class TeamsRepository {

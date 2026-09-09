@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TeamsModule } from '../teams/teams.module';
 import { AuthModule } from '../auth/auth.module';
 
-import { CommentsGateway } from './gateways/comments.gateway';
+import { CommentsGateway } from '../common/realtime/comments.gateway';
 
 @Module({
   imports: [TeamsModule, AuthModule],

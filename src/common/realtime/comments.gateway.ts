@@ -16,7 +16,7 @@ import { ConfigService } from '@nestjs/config';
 import { Server, Socket } from 'socket.io';
 
 import { TeamsRepository } from '../../teams/repositories/teams.repository';
-import { CommentsRepository } from '../repositories/comments.repository';
+import { CommentsRepository } from '../../comments/repositories/comments.repository';
 
 @WebSocketGateway({
   cors: {

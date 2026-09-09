@@ -7,7 +7,7 @@ import {
 import {
   SystemRole,
   TeamRole,
-} from '../lib/shared/enums/role.enum';
+} from '../common/enums/role.enum';
 
 import { TeamsRepository } from './repositories/teams.repository';
 import { CreateTeamDto } from './dto/create-team.dto';

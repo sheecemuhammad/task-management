@@ -14,7 +14,7 @@ import { CreateTeamDto } from '../dto/create-team.dto';
 import { UpdateMemberRoleDto } from '../dto/update-member-role.dto';
 
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { TeamRole } from '../../lib/shared/enums/role.enum';
+import { TeamRole } from '../../common/enums/role.enum';
 import { Roles } from '../decorators/roles.decorator';
 import { RolesGuard } from '../guards/roles.guard';
 

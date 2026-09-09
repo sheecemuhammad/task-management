@@ -7,7 +7,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { TeamRole } from '../../lib/shared/enums/role.enum';
+import { TeamRole } from '../../common/enums/role.enum';
 import { Roles } from '../decorators/roles.decorator';
 import { RolesGuard } from '../guards/roles.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';

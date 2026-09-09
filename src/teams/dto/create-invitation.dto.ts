@@ -3,7 +3,7 @@ import {
   IsEnum,
   IsNotEmpty,
 } from 'class-validator';
-import { TeamRole } from '../../lib/shared/enums/role.enum';
+import { TeamRole } from '../../common/enums/role.enum';
 
 export class CreateInvitationDto {
   @IsEmail()

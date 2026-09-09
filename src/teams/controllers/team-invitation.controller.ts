@@ -10,7 +10,7 @@ import { CreateInvitationDto } from '../dto/create-invitation.dto';
 import { TeamInvitationService } from '../services/team-invitation.service';
 
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { TeamRole } from '../../lib/shared/enums/role.enum';
+import { TeamRole } from '../../common/enums/role.enum';
 import { Roles } from '../decorators/roles.decorator';
 import { RolesGuard } from '../guards/roles.guard';
 

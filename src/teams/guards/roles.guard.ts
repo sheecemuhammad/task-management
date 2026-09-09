@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
-import { SystemRole, TeamRole } from '../../lib/shared/enums/role.enum';
+import { SystemRole, TeamRole } from '../../common/enums/role.enum';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { TeamsRepository } from '../repositories/teams.repository';
 

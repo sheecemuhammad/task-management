@@ -27,7 +27,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../teams/guards/permissions.guard';
 import { Permissions } from '../../teams/decorators/permissions.decorator';
 
-import { CommentsGateway } from '../gateways/comments.gateway';
+import { CommentsGateway } from '../../common/realtime/comments.gateway';
 
 @ApiTags('Comments')
 @ApiBearerAuth('access-token')

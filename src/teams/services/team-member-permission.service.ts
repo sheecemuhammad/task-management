@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { SystemRole, TeamRole } from '../../lib/shared/enums/role.enum';
+import { SystemRole, TeamRole } from '../../common/enums/role.enum';
 
 import { TeamsRepository } from '../repositories/teams.repository';
 import { TeamMemberPermissionRepository } from '../repositories/team-member-permission.repository';

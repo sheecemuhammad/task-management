@@ -12,11 +12,11 @@ import { TasksModule } from './tasks/tasks.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { CommentsModule } from './comments/comments.module';
-import appConfig from './lib/shared/config/app.config';
-import databaseConfig from './lib/shared/config/database.config';
-import authConfig from './lib/shared/config/auth.config';
-import mailConfig from './lib/shared/config/mail.config';
-
+import appConfig from './common/config/app.config';
+import databaseConfig from './common/config/database.config';
+import authConfig from './common/config/auth.config';
+import mailConfig from './common/config/mail.config';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -28,6 +28,7 @@ import mailConfig from './lib/shared/config/mail.config';
     UsersModule,
     AuthModule,
     MailModule,
+    RedisModule,
     TeamsModule,
     TaskGroupsModule,
     TasksModule,

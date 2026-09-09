@@ -10,7 +10,7 @@ import { TeamsRepository } from '../repositories/teams.repository';
 import { TeamInvitationRepository } from '../repositories/team-invitation.repository';
 import { CreateInvitationDto } from '../dto/create-invitation.dto';
 import { MailService } from '../../mail/mail.service';
-import { TeamRole } from '../../lib/shared/enums/role.enum';
+import { TeamRole } from '../../common/enums/role.enum';
 
 @Injectable()
 export class TeamInvitationService {
