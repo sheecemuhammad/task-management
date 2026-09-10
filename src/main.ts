@@ -1,23 +1,24 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  SwaggerModule,
-  DocumentBuilder,
-} from '@nestjs/swagger';
+import { RealtimeSocketGatewayService } from './common/realtime/gateway/realtime-socket-gateway.service';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const realtimeGateway = app.get(RealtimeSocketGatewayService);
+
+  realtimeGateway.initialize(app.getHttpServer());
+
   // -----------------------------------------
   // Config
   // -----------------------------------------
   const configService = app.get(ConfigService);
 
-  const port =
-    configService.get<number>('app.port') ?? 3000;
+  const port = configService.get<number>('app.port') ?? 3000;
 
   // -----------------------------------------
   // Global Validation
@@ -50,29 +51,18 @@ async function bootstrap() {
     )
     .build();
 
-  const document = SwaggerModule.createDocument(
-    app,
-    swaggerConfig,
-  );
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
 
-  SwaggerModule.setup(
-    'api',
-    app,
-    document,
-  );
+  SwaggerModule.setup('api', app, document);
 
   // -----------------------------------------
   // Start Server
   // -----------------------------------------
   await app.listen(port);
 
-  console.log(
-    `Application running on: http://localhost:${port}`,
-  );
+  console.log(`Application running on: http://localhost:${port}`);
 
-  console.log(
-    `Swagger running on: http://localhost:${port}/api`,
-  );
+  console.log(`Swagger running on: http://localhost:${port}/api`);
 }
 
 bootstrap();

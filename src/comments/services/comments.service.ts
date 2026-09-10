@@ -10,13 +10,21 @@ import { CommentsRepository } from '../repositories/comments.repository';
 import { CreateCommentDto } from '../dto/create-comment.dto';
 import { UpdateCommentDto } from '../dto/update-comment.dto';
 
-import { RedisStreamService } from '../../redis/streams/services/redis-stream.service';
+import { RealtimeService } from '../../common/realtime/realtime.service';
+import { REALTIME_EVENTS } from '../../common/realtime-contract/events';
+import { taskRoom } from '../../common/realtime-contract/room-helpers';
+
+import {
+  CommentCreatedPayload,
+  CommentUpdatedPayload,
+  CommentDeletedPayload,
+} from '../../common/realtime-contract/payload';
 
 @Injectable()
 export class CommentsService {
   constructor(
     private readonly commentsRepository: CommentsRepository,
-    private readonly redisStreamService: RedisStreamService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async create(
@@ -26,7 +34,6 @@ export class CommentsService {
     authorId: string,
     dto: CreateCommentDto,
   ) {
-    // 1. Make sure the task belongs to this team/group
     const task = await this.commentsRepository.findTaskInTeam(
       taskId,
       groupId,
@@ -37,13 +44,11 @@ export class CommentsService {
       throw new NotFoundException('Task not found');
     }
 
-    // 2. If this is a reply, make sure parent belongs to same task
     if (dto.parentId) {
-      const parent =
-        await this.commentsRepository.findParentComment(
-          dto.parentId,
-          taskId,
-        );
+      const parent = await this.commentsRepository.findParentComment(
+        dto.parentId,
+        taskId,
+      );
 
       if (!parent) {
         throw new BadRequestException(
@@ -52,34 +57,32 @@ export class CommentsService {
       }
     }
 
-    // 3. Create the comment
-    const comment =
-      await this.commentsRepository.create(
-        taskId,
-        authorId,
-        dto.content,
-        dto.parentId,
-      );
+    const comment = await this.commentsRepository.create(
+      taskId,
+      authorId,
+      dto.content,
+      dto.parentId,
+    );
 
-    // 4. Publish comment-created event to Redis Stream
-    await this.redisStreamService.addEvent(
-      'task-management-events',
-      {
-        event: 'comment:created',
-        taskId,
-        comment: JSON.stringify(comment),
-      },
+    const realtimePayload: CommentCreatedPayload = {
+      id: comment.id,
+      taskId: comment.taskId,
+      authorId: comment.authorId,
+      content: comment.content,
+      parentId: comment.parentId,
+      createdAt: comment.createdAt.toISOString(),
+    };
+
+    await this.realtimeService.emitToRoom(
+      taskRoom(taskId),
+      REALTIME_EVENTS.COMMENT_CREATED,
+      realtimePayload,
     );
 
     return comment;
   }
 
-  async findAll(
-    teamId: string,
-    groupId: string,
-    taskId: string,
-  ) {
-    // Make sure task belongs to requested team/group
+  async findAll(teamId: string, groupId: string, taskId: string) {
     const task = await this.commentsRepository.findTaskInTeam(
       taskId,
       groupId,
@@ -90,8 +93,7 @@ export class CommentsService {
       throw new NotFoundException('Task not found');
     }
 
-    const comments =
-      await this.commentsRepository.findAllByTask(taskId);
+    const comments = await this.commentsRepository.findAllByTask(taskId);
 
     return this.buildCommentTree(comments);
   }
@@ -104,7 +106,6 @@ export class CommentsService {
     userId: string,
     dto: UpdateCommentDto,
   ) {
-    // 1. Make sure task belongs to team/group
     const task = await this.commentsRepository.findTaskInTeam(
       taskId,
       groupId,
@@ -115,28 +116,40 @@ export class CommentsService {
       throw new NotFoundException('Task not found');
     }
 
-    // 2. Find comment
-    const comment =
-      await this.commentsRepository.findByIdAndTask(
-        commentId,
-        taskId,
-      );
+    const comment = await this.commentsRepository.findByIdAndTask(
+      commentId,
+      taskId,
+    );
 
     if (!comment) {
       throw new NotFoundException('Comment not found');
     }
 
-    // 3. Only the author can update their comment
     if (comment.authorId !== userId) {
-      throw new ForbiddenException(
-        'You can only update your own comments',
-      );
+      throw new ForbiddenException('You can only update your own comments');
     }
 
-    return this.commentsRepository.update(
+    const updatedComment = await this.commentsRepository.update(
       commentId,
       dto.content,
     );
+
+    const realtimePayload: CommentUpdatedPayload = {
+      id: updatedComment.id,
+      taskId: updatedComment.taskId,
+      authorId: updatedComment.authorId,
+      content: updatedComment.content,
+      parentId: updatedComment.parentId,
+      createdAt: updatedComment.createdAt.toISOString(),
+    };
+
+    await this.realtimeService.emitToRoom(
+      taskRoom(taskId),
+      REALTIME_EVENTS.COMMENT_UPDATED,
+      realtimePayload,
+    );
+
+    return updatedComment;
   }
 
   async delete(
@@ -146,7 +159,6 @@ export class CommentsService {
     commentId: string,
     userId: string,
   ) {
-    // 1. Make sure task belongs to team/group
     const task = await this.commentsRepository.findTaskInTeam(
       taskId,
       groupId,
@@ -157,38 +169,40 @@ export class CommentsService {
       throw new NotFoundException('Task not found');
     }
 
-    // 2. Find comment
-    const comment =
-      await this.commentsRepository.findByIdAndTask(
-        commentId,
-        taskId,
-      );
+    const comment = await this.commentsRepository.findByIdAndTask(
+      commentId,
+      taskId,
+    );
 
     if (!comment) {
       throw new NotFoundException('Comment not found');
     }
 
-    // 3. Only the author can delete their comment
     if (comment.authorId !== userId) {
-      throw new ForbiddenException(
-        'You can only delete your own comments',
-      );
+      throw new ForbiddenException('You can only delete your own comments');
     }
 
     await this.commentsRepository.delete(commentId);
 
-    return {
+    const deletedComment: CommentDeletedPayload = {
       id: comment.id,
       taskId: comment.taskId,
       deleted: true,
     };
+
+    await this.realtimeService.emitToRoom(
+      taskRoom(taskId),
+      REALTIME_EVENTS.COMMENT_DELETED,
+      deletedComment,
+    );
+
+    return deletedComment;
   }
 
   private buildCommentTree(comments: any[]) {
     const commentMap = new Map<string, any>();
     const roots: any[] = [];
 
-    // First create a node for every comment
     for (const comment of comments) {
       commentMap.set(comment.id, {
         ...comment,
@@ -196,7 +210,6 @@ export class CommentsService {
       });
     }
 
-    // Then connect children to their parents
     for (const comment of comments) {
       const node = commentMap.get(comment.id);
 
@@ -206,7 +219,6 @@ export class CommentsService {
         if (parent) {
           parent.children.push(node);
         } else {
-          // Safety fallback if parent no longer exists
           roots.push(node);
         }
       } else {

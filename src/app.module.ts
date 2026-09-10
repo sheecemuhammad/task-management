@@ -12,11 +12,12 @@ import { TasksModule } from './tasks/tasks.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { CommentsModule } from './comments/comments.module';
+import { CacheModule } from './common/cache/cache.module';
+import { RealtimeModule } from './common/realtime/realtime.module';
 import appConfig from './common/config/app.config';
 import databaseConfig from './common/config/database.config';
 import authConfig from './common/config/auth.config';
 import mailConfig from './common/config/mail.config';
-import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -28,13 +29,14 @@ import { RedisModule } from './redis/redis.module';
     UsersModule,
     AuthModule,
     MailModule,
-    RedisModule,
     TeamsModule,
     TaskGroupsModule,
     TasksModule,
     CloudinaryModule,
     AttachmentsModule,
     CommentsModule,
+    CacheModule,
+    RealtimeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

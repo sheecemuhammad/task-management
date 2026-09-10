@@ -27,8 +27,6 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../teams/guards/permissions.guard';
 import { Permissions } from '../../teams/decorators/permissions.decorator';
 
-import { CommentsGateway } from '../../common/realtime/comments.gateway';
-
 @ApiTags('Comments')
 @ApiBearerAuth('access-token')
 @Controller('teams/:teamId/task-groups/:groupId/tasks/:taskId/comments')
@@ -36,7 +34,6 @@ import { CommentsGateway } from '../../common/realtime/comments.gateway';
 export class CommentsController {
   constructor(
     private readonly commentsService: CommentsService,
-    private readonly commentsGateway: CommentsGateway,
   ) {}
 
   // =====================================================
@@ -151,7 +148,11 @@ export class CommentsController {
     @Param('groupId') groupId: string,
     @Param('taskId') taskId: string,
   ) {
-    return this.commentsService.findAll(teamId, groupId, taskId);
+    return this.commentsService.findAll(
+      teamId,
+      groupId,
+      taskId,
+    );
   }
 
   // =====================================================
@@ -162,7 +163,8 @@ export class CommentsController {
   @Permissions('comment:update')
   @ApiOperation({
     summary: 'Update a comment',
-    description: 'Updates a comment. Users can only update their own comments.',
+    description:
+      'Updates a comment. Users can only update their own comments.',
   })
   @ApiParam({
     name: 'teamId',
@@ -197,7 +199,8 @@ export class CommentsController {
   })
   @ApiResponse({
     status: 403,
-    description: 'Insufficient permissions or comment ownership violation.',
+    description:
+      'Insufficient permissions or comment ownership violation.',
   })
   @ApiResponse({
     status: 404,
@@ -211,7 +214,7 @@ export class CommentsController {
     @Body() dto: UpdateCommentDto,
     @Req() req: any,
   ) {
-    const comment = await this.commentsService.update(
+    return this.commentsService.update(
       teamId,
       groupId,
       taskId,
@@ -219,10 +222,6 @@ export class CommentsController {
       req.user.userId,
       dto,
     );
-
-    this.commentsGateway.broadcastCommentUpdated(taskId, comment);
-
-    return comment;
   }
 
   // =====================================================
@@ -233,7 +232,8 @@ export class CommentsController {
   @Permissions('comment:delete')
   @ApiOperation({
     summary: 'Delete a comment',
-    description: 'Deletes a comment. Users can only delete their own comments.',
+    description:
+      'Deletes a comment. Users can only delete their own comments.',
   })
   @ApiParam({
     name: 'teamId',
@@ -265,7 +265,8 @@ export class CommentsController {
   })
   @ApiResponse({
     status: 403,
-    description: 'Insufficient permissions or comment ownership violation.',
+    description:
+      'Insufficient permissions or comment ownership violation.',
   })
   @ApiResponse({
     status: 404,
@@ -278,16 +279,12 @@ export class CommentsController {
     @Param('commentId') commentId: string,
     @Req() req: any,
   ) {
-    const result = await this.commentsService.delete(
+    return this.commentsService.delete(
       teamId,
       groupId,
       taskId,
       commentId,
       req.user.userId,
     );
-
-    this.commentsGateway.broadcastCommentDeleted(taskId, result);
-
-    return result;
   }
 }
