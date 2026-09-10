@@ -4,14 +4,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
 import { CommentsRepository } from '../repositories/comments.repository';
+
 import { CreateCommentDto } from '../dto/create-comment.dto';
 import { UpdateCommentDto } from '../dto/update-comment.dto';
+
+import { RedisStreamService } from '../../redis/streams/services/redis-stream.service';
 
 @Injectable()
 export class CommentsService {
   constructor(
     private readonly commentsRepository: CommentsRepository,
+    private readonly redisStreamService: RedisStreamService,
   ) {}
 
   async create(
@@ -34,10 +39,11 @@ export class CommentsService {
 
     // 2. If this is a reply, make sure parent belongs to same task
     if (dto.parentId) {
-      const parent = await this.commentsRepository.findParentComment(
-        dto.parentId,
-        taskId,
-      );
+      const parent =
+        await this.commentsRepository.findParentComment(
+          dto.parentId,
+          taskId,
+        );
 
       if (!parent) {
         throw new BadRequestException(
@@ -47,12 +53,25 @@ export class CommentsService {
     }
 
     // 3. Create the comment
-    return this.commentsRepository.create(
-      taskId,
-      authorId,
-      dto.content,
-      dto.parentId,
+    const comment =
+      await this.commentsRepository.create(
+        taskId,
+        authorId,
+        dto.content,
+        dto.parentId,
+      );
+
+    // 4. Publish comment-created event to Redis Stream
+    await this.redisStreamService.addEvent(
+      'task-management-events',
+      {
+        event: 'comment:created',
+        taskId,
+        comment: JSON.stringify(comment),
+      },
     );
+
+    return comment;
   }
 
   async findAll(

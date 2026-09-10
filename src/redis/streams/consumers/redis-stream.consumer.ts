@@ -5,6 +5,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { RedisService } from '../../services/redis.service';
+import { CommentsGateway } from '../../../common/realtime/comments.gateway';
 
 @Injectable()
 export class RedisStreamConsumer implements OnModuleInit, OnModuleDestroy {
@@ -16,7 +17,10 @@ export class RedisStreamConsumer implements OnModuleInit, OnModuleDestroy {
 
   private isRunning = true;
 
-  constructor(private readonly redisService: RedisService) {}
+  constructor(
+    private readonly redisService: RedisService,
+    private readonly commentsGateway: CommentsGateway,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     await this.createConsumerGroup();
@@ -37,14 +41,9 @@ export class RedisStreamConsumer implements OnModuleInit, OnModuleDestroy {
         'MKSTREAM',
       );
 
-      this.logger.log(
-        `Redis consumer group "${this.consumerGroup}" created`,
-      );
+      this.logger.log(`Redis consumer group "${this.consumerGroup}" created`);
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes('BUSYGROUP')
-      ) {
+      if (error instanceof Error && error.message.includes('BUSYGROUP')) {
         this.logger.log(
           `Redis consumer group "${this.consumerGroup}" already exists`,
         );
@@ -80,23 +79,13 @@ export class RedisStreamConsumer implements OnModuleInit, OnModuleDestroy {
 
         for (const [, messages] of result) {
           for (const [messageId, fields] of messages) {
-            this.logger.log(
-              `Received Redis stream event: ${messageId}`,
-            );
+            this.logger.log(`Received Redis stream event: ${messageId}`);
 
-            this.logger.debug(
-              `Event data: ${JSON.stringify(fields)}`,
-            );
+            this.logger.debug(`Event data: ${JSON.stringify(fields)}`);
 
-            await redis.xack(
-              this.streamName,
-              this.consumerGroup,
-              messageId,
-            );
+            await redis.xack(this.streamName, this.consumerGroup, messageId);
 
-            this.logger.log(
-              `Redis stream event acknowledged: ${messageId}`,
-            );
+            this.logger.log(`Redis stream event acknowledged: ${messageId}`);
           }
         }
       } catch (error) {
