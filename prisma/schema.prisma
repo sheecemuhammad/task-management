@@ -41,6 +41,7 @@ model User {
   teamMembers     TeamMember[]
   taskAssignments TaskAssignee[]
   comments        Comment[]
+  commentLikes CommentLike[]
   auditLogs       AuditLog[]
   refreshSessions RefreshSession[]
   oauthAccounts   OAuthAccount[]
@@ -228,11 +229,27 @@ model Comment {
 
   children Comment[] @relation("NestedComments")
 
+  likes CommentLike[]
+
   createdAt DateTime @default(now())
 
   @@index([taskId])
   @@index([authorId])
   @@index([parentId])
+}
+
+model CommentLike {
+  id        String   @id @default(uuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
 }
 
 model Attachment {

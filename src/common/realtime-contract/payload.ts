@@ -15,9 +15,14 @@ export interface CommentUpdatedPayload {
   parentId: string | null;
   createdAt: string;
 }
-
 export interface CommentDeletedPayload {
   id: string;
   taskId: string;
   deleted: boolean;
+}
+export interface CommentLikedPayload {
+  commentId: string;
+  userId: string;
+  liked: boolean;
+  likeCount: number;
 }

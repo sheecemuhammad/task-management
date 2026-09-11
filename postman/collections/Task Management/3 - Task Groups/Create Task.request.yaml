@@ -5,11 +5,11 @@ body:
   type: json
   content: "{\r
 
-    \  \"title\": \"Test Team Isolation\"\r
+    \  \"title\": \"Test Team For Comment Likes\"\r
 
     }"
 auth:
   type: bearer
   credentials:
-    token: "{{accessToken}}"
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlYWZmYmQzYi1mOGE0LTQwMDAtYWVhOS01N2Y1MTVlMjliMTQiLCJlbWFpbCI6InNoZWVjZTE0QGdtYWlsLmNvbSIsInN5c3RlbVJvbGUiOiJVU0VSIiwiaWF0IjoxNzg5MTQzOTkwLCJleHAiOjE3ODkxNDQ4OTB9.5phHexgirgE-_BoAtuiW7OL6P3kObsK2tgtTtULOyAs
 order: 4503176248357219

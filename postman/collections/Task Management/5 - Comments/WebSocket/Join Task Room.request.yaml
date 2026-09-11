@@ -6,7 +6,7 @@ headers:
 events:
   - name: joinTask
     description: ""
-    subscribeOnConnect: false
+    subscribeOnConnect: true
 settings: {}
 messages: .resources/Join Task Room.resources/messages
 order: 4501299413456871

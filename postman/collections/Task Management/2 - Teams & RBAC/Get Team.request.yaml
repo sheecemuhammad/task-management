@@ -1,11 +1,12 @@
 $kind: http-request
 url: "{{baseUrl}}/teams/{{teamBId}}"
 method: GET
-body:
-  type: json
-  content: ""
 auth:
   type: bearer
   credentials:
     token: "{{accessToken}}"
+scripts:
+  - type: beforeRequest
+    code: console.log("TOKEN:", JSON.stringify(pm.variables.get("testToken")));
+    language: text/javascript
 order: 1200490927263183

@@ -20,6 +20,8 @@ import {
 } from '@nestjs/swagger';
 
 import { CommentsService } from '../services/comments.service';
+import { CommentLikesService } from '../services/comment-likes.service';
+
 import { CreateCommentDto } from '../dto/create-comment.dto';
 import { UpdateCommentDto } from '../dto/update-comment.dto';
 
@@ -29,11 +31,14 @@ import { Permissions } from '../../teams/decorators/permissions.decorator';
 
 @ApiTags('Comments')
 @ApiBearerAuth('access-token')
-@Controller('teams/:teamId/task-groups/:groupId/tasks/:taskId/comments')
+@Controller(
+  'teams/:teamId/task-groups/:groupId/tasks/:taskId/comments',
+)
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class CommentsController {
   constructor(
     private readonly commentsService: CommentsService,
+    private readonly commentLikesService: CommentLikesService,
   ) {}
 
   // =====================================================
@@ -280,6 +285,70 @@ export class CommentsController {
     @Req() req: any,
   ) {
     return this.commentsService.delete(
+      teamId,
+      groupId,
+      taskId,
+      commentId,
+      req.user.userId,
+    );
+  }
+
+  // =====================================================
+  // Like / Unlike Comment
+  // =====================================================
+
+  @Post(':commentId/like')
+  @Permissions('comment:view')
+  @ApiOperation({
+    summary: 'Like or unlike a comment',
+    description:
+      'Toggles a thumbs-up like on a comment. If the user has not liked the comment, a like is added. If the user has already liked it, the like is removed.',
+  })
+  @ApiParam({
+    name: 'teamId',
+    description: 'Team UUID',
+    example: '58cdd165-b59a-404a-a0c6-0492ba983018',
+  })
+  @ApiParam({
+    name: 'groupId',
+    description: 'Task group UUID',
+    example: '369ba7a7-ccb7-4464-92f2-dd79d9cd71ec',
+  })
+  @ApiParam({
+    name: 'taskId',
+    description: 'Task UUID',
+    example: '73bf53d7-3691-41b7-941a-b1f9c03af1de',
+  })
+  @ApiParam({
+    name: 'commentId',
+    description: 'Comment UUID',
+    example: '586d08d2-c713-412f-8857-cfc77063d70c',
+  })
+  @ApiResponse({
+    status: 201,
+    description:
+      'Comment like toggled successfully.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Insufficient permissions.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Comment not found.',
+  })
+  async toggleLike(
+    @Param('teamId') teamId: string,
+    @Param('groupId') groupId: string,
+    @Param('taskId') taskId: string,
+    @Param('commentId') commentId: string,
+    @Req() req: any,
+  ) {
+    return this.commentLikesService.toggleLike(
       teamId,
       groupId,
       taskId,

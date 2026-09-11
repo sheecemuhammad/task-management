@@ -11,3 +11,4 @@ variables:
   user4TeamBMemberId: ""
   groupId: ""
   taskId: ""
+  testToken: ""
