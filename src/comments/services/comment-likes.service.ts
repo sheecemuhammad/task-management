@@ -6,6 +6,7 @@ import {
 
 import { CommentLikesRepository } from '../repositories/comment-likes.repository';
 import { CommentsRepository } from '../repositories/comments.repository';
+import { CommentLikeQueueService } from './comment-like-queue.service';
 
 import { RealtimeService } from '../../common/realtime/realtime.service';
 import { REALTIME_EVENTS } from '../../common/realtime-contract/events';
@@ -16,8 +17,13 @@ export class CommentLikesService {
   constructor(
     private readonly commentLikesRepository: CommentLikesRepository,
     private readonly commentsRepository: CommentsRepository,
+    private readonly commentLikeQueueService: CommentLikeQueueService,
     private readonly realtimeService: RealtimeService,
   ) {}
+
+  // =====================================================
+  // Toggle Like
+  // =====================================================
 
   async toggleLike(
     teamId: string,
@@ -26,14 +32,20 @@ export class CommentLikesService {
     commentId: string,
     userId: string,
   ) {
+    // ===================================================
+    // Validate User
+    // ===================================================
+
     if (!userId) {
       throw new BadRequestException(
         'User ID is required',
       );
     }
 
-    // Verify that the comment belongs to the
-    // requested team's task group.
+    // ===================================================
+    // Verify Comment
+    // ===================================================
+
     const comment =
       await this.commentsRepository.findCommentInTeam(
         commentId,
@@ -48,47 +60,157 @@ export class CommentLikesService {
       );
     }
 
-    // Check whether this user has already
-    // liked the comment.
-    const existingLike =
-      await this.commentLikesRepository.findByCommentAndUser(
-        commentId,
-        userId,
-      );
+    // ===================================================
+    // Determine Current User Like State
+    // ===================================================
 
-    let liked: boolean;
+    /*
+     * Redis latest-state is checked first.
+     *
+     * This is important because PostgreSQL persistence
+     * happens asynchronously.
+     *
+     * Example:
+     *
+     * PostgreSQL = unliked
+     * Redis      = liked
+     *
+     * In this situation the user is already considered
+     * liked, so the next toggle should become UNLIKE.
+     */
 
-    if (existingLike) {
-      // Already liked → remove the like.
-      await this.commentLikesRepository.delete(
-        commentId,
-        userId,
-      );
+    const latestRedisState =
+      await this.commentLikeQueueService
+        .getLatestLikeState(
+          commentId,
+          userId,
+        );
 
-      liked = false;
+    let currentLiked: boolean;
+
+    if (latestRedisState !== null) {
+      currentLiked = latestRedisState;
     } else {
-      // Not liked → create the like.
-      await this.commentLikesRepository.create(
-        commentId,
-        userId,
-      );
+      const existingLike =
+        await this.commentLikesRepository
+          .findByCommentAndUser(
+            commentId,
+            userId,
+          );
 
-      liked = true;
+      currentLiked = !!existingLike;
     }
 
-    // Get the latest total like count.
-    const likeCount =
-      await this.commentLikesRepository.countByComment(
-        commentId,
-      );
+    // ===================================================
+    // Toggle
+    // ===================================================
 
-    // Select the appropriate realtime event.
+    const liked = !currentLiked;
+
+    // ===================================================
+    // Queue Event
+    // ===================================================
+
+    /*
+     * addLikeEvent() performs two operations:
+     *
+     * 1. Adds the event to Redis Stream.
+     * 2. Updates the Redis latest-state Hash.
+     */
+
+    await this.commentLikeQueueService.addLikeEvent(
+      commentId,
+      userId,
+      liked,
+    );
+
+    // ===================================================
+    // Calculate Like Count
+    // ===================================================
+
+    /*
+     * PostgreSQL contains persisted likes.
+     *
+     * Redis may contain newer states which have not yet
+     * reached PostgreSQL.
+     *
+     * Therefore we start with the database count and
+     * reconcile every Redis state against the database.
+     */
+
+    let likeCount =
+      await this.commentLikesRepository
+        .countByComment(commentId);
+
+    const redisStates =
+      await this.commentLikeQueueService
+        .getLatestLikeStates(commentId);
+
+    /*
+     * Redis contains the latest state for users who have
+     * interacted with this comment through the new
+     * like/unlike flow.
+     *
+     * We compare each Redis state with PostgreSQL.
+     */
+
+    for (const [
+      redisUserId,
+      redisLiked,
+    ] of Object.entries(redisStates)) {
+      const databaseLike =
+        await this.commentLikesRepository
+          .findByCommentAndUser(
+            commentId,
+            redisUserId,
+          );
+
+      const databaseLiked =
+        !!databaseLike;
+
+      /*
+       * DB = false
+       * Redis = true
+       *
+       * This like has not been persisted yet.
+       */
+      if (
+        !databaseLiked &&
+        redisLiked
+      ) {
+        likeCount += 1;
+      }
+
+      /*
+       * DB = true
+       * Redis = false
+       *
+       * This unlike has not been persisted yet.
+       */
+      if (
+        databaseLiked &&
+        !redisLiked
+      ) {
+        likeCount -= 1;
+      }
+    }
+
+    // ===================================================
+    // Protect Against Negative Count
+    // ===================================================
+
+    if (likeCount < 0) {
+      likeCount = 0;
+    }
+
+    // ===================================================
+    // Realtime Event
+    // ===================================================
+
     const event = liked
       ? REALTIME_EVENTS.COMMENT_LIKED
       : REALTIME_EVENTS.COMMENT_UNLIKED;
 
-    // Broadcast the change to everyone
-    // connected to this task room.
     await this.realtimeService.emitToRoom(
       taskRoom(comment.taskId),
       event,
@@ -99,6 +221,10 @@ export class CommentLikesService {
         likeCount,
       },
     );
+
+    // ===================================================
+    // Response
+    // ===================================================
 
     return {
       commentId,

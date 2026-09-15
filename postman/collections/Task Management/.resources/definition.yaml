@@ -12,3 +12,4 @@ variables:
   groupId: ""
   taskId: ""
   testToken: ""
+  commentId: ""
