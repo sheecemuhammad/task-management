@@ -18,9 +18,23 @@ import { UpdateTaskDto } from '../dto/update-task.dto';
 import { AssignTaskDto } from '../dto/assign-task.dto';
 import { CreateShareDto } from '../dto/create-share.dto';
 
+import { RealtimeService } from '../../common/realtime/realtime.service';
+import { REALTIME_EVENTS } from '../../common/realtime-contract/events';
+import {
+  taskRoom,
+  taskGroupRoom,
+} from '../../common/realtime-contract/room-helpers';
+
 @Injectable()
 export class TasksService {
-  constructor(private readonly tasksRepository: TasksRepository) {}
+  constructor(
+    private readonly tasksRepository: TasksRepository,
+    private readonly realtimeService: RealtimeService,
+  ) {}
+
+  // =====================================================
+  // Create Task
+  // =====================================================
 
   async create(teamId: string, groupId: string, createTaskDto: CreateTaskDto) {
     const group = await this.tasksRepository.findGroupByTeam(groupId, teamId);
@@ -29,7 +43,7 @@ export class TasksService {
       throw new NotFoundException('Task group not found');
     }
 
-    return this.tasksRepository.create(
+    const task = await this.tasksRepository.create(
       createTaskDto.title,
       createTaskDto.description,
       createTaskDto.status ?? TaskStatus.TODO,
@@ -37,7 +51,20 @@ export class TasksService {
       createTaskDto.dueDate ? new Date(createTaskDto.dueDate) : undefined,
       groupId,
     );
+
+    // Notify users viewing this task group.
+    await this.realtimeService.emitToRoom(
+      taskGroupRoom(groupId),
+      REALTIME_EVENTS.TASK_CREATED,
+      task,
+    );
+
+    return task;
   }
+
+  // =====================================================
+  // Find All Tasks
+  // =====================================================
 
   async findAll(teamId: string, groupId: string) {
     const group = await this.tasksRepository.findGroupByTeam(groupId, teamId);
@@ -48,6 +75,10 @@ export class TasksService {
 
     return this.tasksRepository.findAllByGroup(groupId);
   }
+
+  // =====================================================
+  // Find Task By ID
+  // =====================================================
 
   async findById(teamId: string, groupId: string, taskId: string) {
     const task = await this.tasksRepository.findByIdAndGroup(
@@ -62,6 +93,10 @@ export class TasksService {
 
     return task;
   }
+
+  // =====================================================
+  // Update Task
+  // =====================================================
 
   async update(
     teamId: string,
@@ -101,8 +136,22 @@ export class TasksService {
         : null;
     }
 
-    return this.tasksRepository.update(taskId, data);
+    const updatedTask = await this.tasksRepository.update(taskId, data);
+
+    // Notify users currently viewing
+    // this task.
+    await this.realtimeService.emitToRoom(
+      taskRoom(taskId),
+      REALTIME_EVENTS.TASK_UPDATED,
+      updatedTask,
+    );
+
+    return updatedTask;
   }
+
+  // =====================================================
+  // Assign Task Assignees
+  // =====================================================
 
   async assignAssignees(
     teamId: string,
@@ -110,7 +159,8 @@ export class TasksService {
     taskId: string,
     assignTaskDto: AssignTaskDto,
   ) {
-    // Make sure the task belongs to the specified team and group
+    // Make sure the task belongs to
+    // the specified team and group.
     await this.findById(teamId, groupId, taskId);
 
     const requestedUserIds = [...new Set(assignTaskDto.assigneeIds)];
@@ -132,8 +182,29 @@ export class TasksService {
       );
     }
 
-    return this.tasksRepository.replaceAssignees(taskId, requestedUserIds);
+    const assignees = await this.tasksRepository.replaceAssignees(
+      taskId,
+      requestedUserIds,
+    );
+
+    // Notify users currently viewing
+    // this task.
+    await this.realtimeService.emitToRoom(
+      taskRoom(taskId),
+      REALTIME_EVENTS.TASK_ASSIGNEES_UPDATED,
+      {
+        taskId,
+        assigneeIds: requestedUserIds,
+        assignees,
+      },
+    );
+
+    return assignees;
   }
+
+  // =====================================================
+  // Create Share
+  // =====================================================
 
   async createShare(
     teamId: string,
@@ -144,6 +215,7 @@ export class TasksService {
     await this.findById(teamId, groupId, taskId);
 
     const token = generateShareToken();
+
     const tokenHash = hashShareToken(token);
 
     const expiresInDays = createShareDto.expiresInDays ?? 7;
@@ -160,11 +232,19 @@ export class TasksService {
     };
   }
 
+  // =====================================================
+  // Revoke Share
+  // =====================================================
+
   async revokeShare(teamId: string, groupId: string, taskId: string) {
     await this.findById(teamId, groupId, taskId);
 
     return this.tasksRepository.revokeShareToken(taskId);
   }
+
+  // =====================================================
+  // Get Public Task
+  // =====================================================
 
   async getPublicTask(token: string) {
     const tokenHash = hashShareToken(token);
@@ -197,9 +277,25 @@ export class TasksService {
     };
   }
 
+  // =====================================================
+  // Delete Task
+  // =====================================================
+
   async delete(teamId: string, groupId: string, taskId: string) {
     await this.findById(teamId, groupId, taskId);
 
-    return this.tasksRepository.delete(taskId);
+    const deletedTask = await this.tasksRepository.delete(taskId);
+
+    // Notify users currently viewing
+    // this task.
+    await this.realtimeService.emitToRoom(
+      taskRoom(taskId),
+      REALTIME_EVENTS.TASK_DELETED,
+      {
+        taskId,
+      },
+    );
+
+    return deletedTask;
   }
 }
