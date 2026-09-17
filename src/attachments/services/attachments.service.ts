@@ -9,13 +9,22 @@ import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import { AttachmentsRepository } from '../repositories/attachments.repository';
 import { fileTypeFromBuffer } from 'file-type';
 
+import { RealtimeService } from '../../common/realtime/realtime.service';
+import { REALTIME_EVENTS } from '../../common/realtime-contract/events';
+import { taskRoom } from '../../common/realtime-contract/room-helpers';
+
 @Injectable()
 export class AttachmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cloudinaryService: CloudinaryService,
     private readonly attachmentsRepository: AttachmentsRepository,
+    private readonly realtimeService: RealtimeService,
   ) {}
+
+  // =====================================================
+  // Upload Attachment
+  // =====================================================
 
   async upload(
     teamId: string,
@@ -35,10 +44,15 @@ export class AttachmentsService {
     const maxFileSize = 10 * 1024 * 1024;
 
     if (file.size > maxFileSize) {
-      throw new BadRequestException('File size must not exceed 10 MB');
+      throw new BadRequestException(
+        'File size must not exceed 10 MB',
+      );
     }
 
-    // Verify that task belongs to the requested group and team
+    // ===================================================
+    // Verify Task
+    // ===================================================
+
     const task = await this.prisma.task.findFirst({
       where: {
         id: taskId,
@@ -53,25 +67,58 @@ export class AttachmentsService {
       throw new NotFoundException('Task not found');
     }
 
-    // Detect the actual file MIME type
-    const detectedType = await fileTypeFromBuffer(file.buffer);
+    // ===================================================
+    // Detect Actual File MIME Type
+    // ===================================================
 
-    const mimeType = detectedType?.mime ?? file.mimetype;
+    const detectedType =
+      await fileTypeFromBuffer(file.buffer);
 
-    // Upload file to Cloudinary
-    const uploadedFile = await this.cloudinaryService.uploadFile(file);
+    const mimeType =
+      detectedType?.mime ?? file.mimetype;
 
-    // Save Cloudinary metadata in PostgreSQL
-    return this.attachmentsRepository.create(
-      taskId,
-      uploadedFile.secure_url,
-      uploadedFile.public_id,
-      mimeType,
-      file.size,
+    // ===================================================
+    // Upload To Cloudinary
+    // ===================================================
+
+    const uploadedFile =
+      await this.cloudinaryService.uploadFile(file);
+
+    // ===================================================
+    // Save Attachment In PostgreSQL
+    // ===================================================
+
+    const attachment =
+      await this.attachmentsRepository.create(
+        taskId,
+        uploadedFile.secure_url,
+        uploadedFile.public_id,
+        mimeType,
+        file.size,
+      );
+
+    // ===================================================
+    // Realtime Event
+    // =====================================================
+
+    await this.realtimeService.emitToRoom(
+      taskRoom(taskId),
+      REALTIME_EVENTS.ATTACHMENT_CREATED,
+      attachment,
     );
+
+    return attachment;
   }
 
-  async findAll(teamId: string, groupId: string, taskId: string) {
+  // =====================================================
+  // Find All Attachments
+  // =====================================================
+
+  async findAll(
+    teamId: string,
+    groupId: string,
+    taskId: string,
+  ) {
     const task = await this.prisma.task.findFirst({
       where: {
         id: taskId,
@@ -89,13 +136,20 @@ export class AttachmentsService {
     return this.attachmentsRepository.findByTask(taskId);
   }
 
+  // =====================================================
+  // Find Attachment By ID
+  // =====================================================
+
   async findById(
     teamId: string,
     groupId: string,
     taskId: string,
     attachmentId: string,
   ) {
-    const attachment = await this.attachmentsRepository.findById(attachmentId);
+    const attachment =
+      await this.attachmentsRepository.findById(
+        attachmentId,
+      );
 
     if (
       !attachment ||
@@ -103,11 +157,17 @@ export class AttachmentsService {
       attachment.task.taskGroup.id !== groupId ||
       attachment.task.taskGroup.teamId !== teamId
     ) {
-      throw new NotFoundException('Attachment not found');
+      throw new NotFoundException(
+        'Attachment not found',
+      );
     }
 
     return attachment;
   }
+
+  // =====================================================
+  // Delete Attachment
+  // =====================================================
 
   async delete(
     teamId: string,
@@ -115,20 +175,45 @@ export class AttachmentsService {
     taskId: string,
     attachmentId: string,
   ) {
-    const attachment = await this.findById(
-      teamId,
-      groupId,
-      taskId,
-      attachmentId,
-    );
+    const attachment =
+      await this.findById(
+        teamId,
+        groupId,
+        taskId,
+        attachmentId,
+      );
 
-    // Delete from Cloudinary first
+    // ===================================================
+    // Delete From Cloudinary
+    // ===================================================
+
     await this.cloudinaryService.deleteFile(
       attachment.publicId,
       attachment.mimeType,
     );
 
-    // Then delete database record
-    return this.attachmentsRepository.delete(attachmentId);
+    // ===================================================
+    // Delete Database Record
+    // ===================================================
+
+    const deletedAttachment =
+      await this.attachmentsRepository.delete(
+        attachmentId,
+      );
+
+    // ===================================================
+    // Realtime Event
+    // ===================================================
+
+    await this.realtimeService.emitToRoom(
+      taskRoom(taskId),
+      REALTIME_EVENTS.ATTACHMENT_DELETED,
+      {
+        attachmentId,
+        taskId,
+      },
+    );
+
+    return deletedAttachment;
   }
 }

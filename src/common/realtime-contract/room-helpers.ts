@@ -15,6 +15,14 @@ export function taskGroupRoom(groupId: string): string {
 }
 
 // =====================================================
+// Team Room
+// =====================================================
+
+export function teamRoom(teamId: string): string {
+  return `room_team_${teamId}`;
+}
+
+// =====================================================
 // User Room
 // =====================================================
 

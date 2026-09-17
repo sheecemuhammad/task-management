@@ -17,6 +17,29 @@ export const REALTIME_EVENTS = {
   TASK_UPDATED: 'task:updated',
   TASK_DELETED: 'task:deleted',
   TASK_ASSIGNEES_UPDATED: 'task:assignees-updated',
+
+  // =====================================================
+  // Task Group Events
+  // =====================================================
+
+  TASK_GROUP_CREATED: 'task_group:created',
+  TASK_GROUP_UPDATED: 'task_group:updated',
+  TASK_GROUP_DELETED: 'task_group:deleted',
+
+  // =====================================================
+  // Attachment Events
+  // =====================================================
+
+  ATTACHMENT_CREATED: 'attachment:created',
+  ATTACHMENT_DELETED: 'attachment:deleted',
+
+  // =====================================================
+  // Team Events
+  // =====================================================
+
+  // TEAM_CREATED: 'team:created',
+  // TEAM_UPDATED: 'team:updated',
+  // TEAM_DELETED: 'team:deleted',
 } as const;
 
 export type RealtimeEvent =

@@ -21,12 +21,14 @@ import { JoinRoomPolicy } from './join-room-policy';
 
 import {
   taskRoom,
+  taskGroupRoom,
+  teamRoom,
   userRoom,
 } from '../../realtime-contract/room-helpers';
 
 interface SocketCallbackResponse {
   success: boolean;
-  taskId?: string;
+  id?: string;
   message?: string;
 }
 
@@ -214,13 +216,192 @@ export class RealtimeSocketGatewayService
       return;
     }
 
-    // Automatically join user's personal room.
+    // ===================================================
+    // User Room
+    // ===================================================
+
     socket.join(
       userRoom(userId),
     );
 
     this.logger.log(
       `Realtime socket connected: ${socket.id} (user: ${userId})`,
+    );
+
+    // ===================================================
+    // Join Team
+    // ===================================================
+
+    socket.on(
+      'joinTeam',
+      async (
+        teamId: string,
+        callback?: (
+          response: SocketCallbackResponse,
+        ) => void,
+      ) => {
+        try {
+          const joined =
+            await this.joinTeamRoom(
+              socket,
+              teamId,
+            );
+
+          callback?.({
+            success: joined,
+            id: teamId,
+            ...(joined
+              ? {}
+              : {
+                  message:
+                    'You are not authorized to join this team room',
+                }),
+          });
+        } catch (error) {
+          this.logger.error(
+            'Failed to join team room',
+            error instanceof Error
+              ? error.stack
+              : String(error),
+          );
+
+          callback?.({
+            success: false,
+            id: teamId,
+            message:
+              'Failed to join team room',
+          });
+        }
+      },
+    );
+
+    // ===================================================
+    // Leave Team
+    // ===================================================
+
+    socket.on(
+      'leaveTeam',
+      async (
+        teamId: string,
+        callback?: (
+          response: SocketCallbackResponse,
+        ) => void,
+      ) => {
+        try {
+          const left =
+            await this.leaveTeamRoom(
+              socket,
+              teamId,
+            );
+
+          callback?.({
+            success: left,
+            id: teamId,
+          });
+        } catch (error) {
+          this.logger.error(
+            'Failed to leave team room',
+            error instanceof Error
+              ? error.stack
+              : String(error),
+          );
+
+          callback?.({
+            success: false,
+            id: teamId,
+            message:
+              'Failed to leave team room',
+          });
+        }
+      },
+    );
+
+    // ===================================================
+    // Join Task Group
+    // ===================================================
+
+    socket.on(
+      'joinTaskGroup',
+      async (
+        groupId: string,
+        callback?: (
+          response: SocketCallbackResponse,
+        ) => void,
+      ) => {
+        try {
+          const joined =
+            await this.joinTaskGroupRoom(
+              socket,
+              groupId,
+            );
+
+          callback?.({
+            success: joined,
+            id: groupId,
+            ...(joined
+              ? {}
+              : {
+                  message:
+                    'You are not authorized to join this task-group room',
+                }),
+          });
+        } catch (error) {
+          this.logger.error(
+            'Failed to join task-group room',
+            error instanceof Error
+              ? error.stack
+              : String(error),
+          );
+
+          callback?.({
+            success: false,
+            id: groupId,
+            message:
+              'Failed to join task-group room',
+          });
+        }
+      },
+    );
+
+    // ===================================================
+    // Leave Task Group
+    // ===================================================
+
+    socket.on(
+      'leaveTaskGroup',
+      async (
+        groupId: string,
+        callback?: (
+          response: SocketCallbackResponse,
+        ) => void,
+      ) => {
+        try {
+          const left =
+            await this.leaveTaskGroupRoom(
+              socket,
+              groupId,
+            );
+
+          callback?.({
+            success: left,
+            id: groupId,
+          });
+        } catch (error) {
+          this.logger.error(
+            'Failed to leave task-group room',
+            error instanceof Error
+              ? error.stack
+              : String(error),
+          );
+
+          callback?.({
+            success: false,
+            id: groupId,
+            message:
+              'Failed to leave task-group room',
+          });
+        }
+      },
     );
 
     // ===================================================
@@ -244,8 +425,7 @@ export class RealtimeSocketGatewayService
 
           callback?.({
             success: joined,
-            taskId,
-
+            id: taskId,
             ...(joined
               ? {}
               : {
@@ -263,7 +443,7 @@ export class RealtimeSocketGatewayService
 
           callback?.({
             success: false,
-            taskId,
+            id: taskId,
             message:
               'Failed to join task room',
           });
@@ -292,7 +472,7 @@ export class RealtimeSocketGatewayService
 
           callback?.({
             success: left,
-            taskId,
+            id: taskId,
           });
         } catch (error) {
           this.logger.error(
@@ -304,7 +484,7 @@ export class RealtimeSocketGatewayService
 
           callback?.({
             success: false,
-            taskId,
+            id: taskId,
             message:
               'Failed to leave task room',
           });
@@ -324,6 +504,138 @@ export class RealtimeSocketGatewayService
         );
       },
     );
+  }
+
+  // =====================================================
+  // Join Team Room
+  // =====================================================
+
+  async joinTeamRoom(
+    socket: Socket,
+    teamId: string,
+  ): Promise<boolean> {
+    const user =
+      socket.data.user;
+
+    if (
+      !user?.id ||
+      !teamId
+    ) {
+      return false;
+    }
+
+    const allowed =
+      await this.joinRoomPolicy.canJoinTeamRoom(
+        user,
+        teamId,
+      );
+
+    if (!allowed) {
+      this.logger.warn(
+        `User ${user.id} denied access to team room: ${teamId}`,
+      );
+
+      return false;
+    }
+
+    await socket.join(
+      teamRoom(teamId),
+    );
+
+    this.logger.log(
+      `Socket ${socket.id} joined team room: ${teamRoom(teamId)}`,
+    );
+
+    return true;
+  }
+
+  // =====================================================
+  // Leave Team Room
+  // =====================================================
+
+  async leaveTeamRoom(
+    socket: Socket,
+    teamId: string,
+  ): Promise<boolean> {
+    if (!teamId) {
+      return false;
+    }
+
+    await socket.leave(
+      teamRoom(teamId),
+    );
+
+    this.logger.log(
+      `Socket ${socket.id} left team room: ${teamRoom(teamId)}`,
+    );
+
+    return true;
+  }
+
+  // =====================================================
+  // Join Task Group Room
+  // =====================================================
+
+  async joinTaskGroupRoom(
+    socket: Socket,
+    groupId: string,
+  ): Promise<boolean> {
+    const user =
+      socket.data.user;
+
+    if (
+      !user?.id ||
+      !groupId
+    ) {
+      return false;
+    }
+
+    const allowed =
+      await this.joinRoomPolicy.canJoinTaskGroupRoom(
+        user,
+        groupId,
+      );
+
+    if (!allowed) {
+      this.logger.warn(
+        `User ${user.id} denied access to task-group room: ${groupId}`,
+      );
+
+      return false;
+    }
+
+    await socket.join(
+      taskGroupRoom(groupId),
+    );
+
+    this.logger.log(
+      `Socket ${socket.id} joined task-group room: ${taskGroupRoom(groupId)}`,
+    );
+
+    return true;
+  }
+
+  // =====================================================
+  // Leave Task Group Room
+  // =====================================================
+
+  async leaveTaskGroupRoom(
+    socket: Socket,
+    groupId: string,
+  ): Promise<boolean> {
+    if (!groupId) {
+      return false;
+    }
+
+    await socket.leave(
+      taskGroupRoom(groupId),
+    );
+
+    this.logger.log(
+      `Socket ${socket.id} left task-group room: ${taskGroupRoom(groupId)}`,
+    );
+
+    return true;
   }
 
   // =====================================================
