@@ -5,6 +5,18 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class AttachmentsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findTaskInTeam(taskId: string, groupId: string, teamId: string) {
+    return this.prisma.task.findFirst({
+      where: {
+        id: taskId,
+        groupId,
+        taskGroup: {
+          teamId,
+        },
+      },
+    });
+  }
+
   async create(
     taskId: string,
     url: string,

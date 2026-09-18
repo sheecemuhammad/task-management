@@ -4,7 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { PrismaService } from '../../prisma/prisma.service';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import { AttachmentsRepository } from '../repositories/attachments.repository';
 import { fileTypeFromBuffer } from 'file-type';
@@ -16,7 +15,6 @@ import { taskRoom } from '../../common/realtime-contract/room-helpers';
 @Injectable()
 export class AttachmentsService {
   constructor(
-    private readonly prisma: PrismaService,
     private readonly cloudinaryService: CloudinaryService,
     private readonly attachmentsRepository: AttachmentsRepository,
     private readonly realtimeService: RealtimeService,
@@ -51,15 +49,11 @@ export class AttachmentsService {
     // Verify Task
     // ===================================================
 
-    const task = await this.prisma.task.findFirst({
-      where: {
-        id: taskId,
-        groupId,
-        taskGroup: {
-          teamId,
-        },
-      },
-    });
+    const task = await this.attachmentsRepository.findTaskInTeam(
+      taskId,
+      groupId,
+      teamId,
+    );
 
     if (!task) {
       throw new NotFoundException('Task not found');
@@ -93,7 +87,7 @@ export class AttachmentsService {
 
     // ===================================================
     // Realtime Event
-    // =====================================================
+    // ===================================================
 
     await this.realtimeService.emitToRoom(
       taskRoom(taskId),
@@ -109,15 +103,11 @@ export class AttachmentsService {
   // =====================================================
 
   async findAll(teamId: string, groupId: string, taskId: string) {
-    const task = await this.prisma.task.findFirst({
-      where: {
-        id: taskId,
-        groupId,
-        taskGroup: {
-          teamId,
-        },
-      },
-    });
+    const task = await this.attachmentsRepository.findTaskInTeam(
+      taskId,
+      groupId,
+      teamId,
+    );
 
     if (!task) {
       throw new NotFoundException('Task not found');

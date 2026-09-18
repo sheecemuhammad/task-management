@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { TeamsService } from '../teams.service';
+import { TeamsService } from '../services/teams.service';
 import { CreateTeamDto } from '../dto/create-team.dto';
 import { UpdateMemberRoleDto } from '../dto/update-member-role.dto';
 

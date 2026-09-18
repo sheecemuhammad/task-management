@@ -4,11 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { SystemRole, TeamRole } from '../common/enums/role.enum';
+import { SystemRole, TeamRole } from '../../common/enums/role.enum';
 
-import { TeamsRepository } from './repositories/teams.repository';
-import { CreateTeamDto } from './dto/create-team.dto';
-import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
+import { TeamsRepository } from '../repositories/teams.repository';
+import { CreateTeamDto } from '../dto/create-team.dto';
+import { UpdateMemberRoleDto } from '../dto/update-member-role.dto';
 
 @Injectable()
 export class TeamsService {

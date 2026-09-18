@@ -9,7 +9,6 @@ import { CommentLikeQueueService } from './services/comment-like-queue.service';
 import { CommentLikePersistenceService } from './services/comment-like-persistence.service';
 import { CommentLikeStreamConsumerService } from './services/comment-like-stream-consumer.service';
 
-import { PrismaService } from '../prisma/prisma.service';
 import { TeamsModule } from '../teams/teams.module';
 import { AuthModule } from '../auth/auth.module';
 
@@ -24,7 +23,6 @@ import { AuthModule } from '../auth/auth.module';
     CommentLikeQueueService,
     CommentLikePersistenceService,
     CommentLikeStreamConsumerService,
-    PrismaService,
   ],
 })
 export class CommentsModule {}
