@@ -9,18 +9,10 @@ import { MailModule } from '../mail/mail.module';
 @Module({
   imports: [MailModule],
 
-  providers: [
-    UsersRepository,
-    UsersService,
-  ],
+  providers: [UsersRepository, UsersService],
 
-  exports: [
-    UsersRepository,
-    UsersService,
-  ],
+  exports: [UsersRepository, UsersService],
 
-  controllers: [
-    UsersController,
-  ],
+  controllers: [UsersController],
 })
 export class UsersModule {}

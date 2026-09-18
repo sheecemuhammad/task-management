@@ -10,9 +10,7 @@ interface CommentLikeEvent {
 
 @Injectable()
 export class CommentLikePersistenceService {
-  private readonly logger = new Logger(
-    CommentLikePersistenceService.name,
-  );
+  private readonly logger = new Logger(CommentLikePersistenceService.name);
 
   constructor(
     private readonly commentLikesRepository: CommentLikesRepository,
@@ -22,9 +20,7 @@ export class CommentLikePersistenceService {
   // Process Batch
   // =====================================================
 
-  async processBatch(
-    events: CommentLikeEvent[],
-  ): Promise<void> {
+  async processBatch(events: CommentLikeEvent[]): Promise<void> {
     if (events.length === 0) {
       return;
     }
@@ -49,32 +45,23 @@ export class CommentLikePersistenceService {
      * We only need the final state.
      */
 
-    const latestStates = new Map<
-      string,
-      CommentLikeEvent
-    >();
+    const latestStates = new Map<string, CommentLikeEvent>();
 
     for (const event of events) {
-      const key =
-        `${event.commentId}:${event.userId}`;
+      const key = `${event.commentId}:${event.userId}`;
 
       latestStates.set(key, event);
     }
 
-    const finalEvents =
-      Array.from(latestStates.values());
+    const finalEvents = Array.from(latestStates.values());
 
     // ===================================================
     // Separate Likes and Unlikes
     // ===================================================
 
-    const likes = finalEvents.filter(
-      (event) => event.liked,
-    );
+    const likes = finalEvents.filter((event) => event.liked);
 
-    const unlikes = finalEvents.filter(
-      (event) => !event.liked,
-    );
+    const unlikes = finalEvents.filter((event) => !event.liked);
 
     // ===================================================
     // Persist Likes

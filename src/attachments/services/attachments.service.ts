@@ -44,9 +44,7 @@ export class AttachmentsService {
     const maxFileSize = 10 * 1024 * 1024;
 
     if (file.size > maxFileSize) {
-      throw new BadRequestException(
-        'File size must not exceed 10 MB',
-      );
+      throw new BadRequestException('File size must not exceed 10 MB');
     }
 
     // ===================================================
@@ -71,31 +69,27 @@ export class AttachmentsService {
     // Detect Actual File MIME Type
     // ===================================================
 
-    const detectedType =
-      await fileTypeFromBuffer(file.buffer);
+    const detectedType = await fileTypeFromBuffer(file.buffer);
 
-    const mimeType =
-      detectedType?.mime ?? file.mimetype;
+    const mimeType = detectedType?.mime ?? file.mimetype;
 
     // ===================================================
     // Upload To Cloudinary
     // ===================================================
 
-    const uploadedFile =
-      await this.cloudinaryService.uploadFile(file);
+    const uploadedFile = await this.cloudinaryService.uploadFile(file);
 
     // ===================================================
     // Save Attachment In PostgreSQL
     // ===================================================
 
-    const attachment =
-      await this.attachmentsRepository.create(
-        taskId,
-        uploadedFile.secure_url,
-        uploadedFile.public_id,
-        mimeType,
-        file.size,
-      );
+    const attachment = await this.attachmentsRepository.create(
+      taskId,
+      uploadedFile.secure_url,
+      uploadedFile.public_id,
+      mimeType,
+      file.size,
+    );
 
     // ===================================================
     // Realtime Event
@@ -114,11 +108,7 @@ export class AttachmentsService {
   // Find All Attachments
   // =====================================================
 
-  async findAll(
-    teamId: string,
-    groupId: string,
-    taskId: string,
-  ) {
+  async findAll(teamId: string, groupId: string, taskId: string) {
     const task = await this.prisma.task.findFirst({
       where: {
         id: taskId,
@@ -146,10 +136,7 @@ export class AttachmentsService {
     taskId: string,
     attachmentId: string,
   ) {
-    const attachment =
-      await this.attachmentsRepository.findById(
-        attachmentId,
-      );
+    const attachment = await this.attachmentsRepository.findById(attachmentId);
 
     if (
       !attachment ||
@@ -157,9 +144,7 @@ export class AttachmentsService {
       attachment.task.taskGroup.id !== groupId ||
       attachment.task.taskGroup.teamId !== teamId
     ) {
-      throw new NotFoundException(
-        'Attachment not found',
-      );
+      throw new NotFoundException('Attachment not found');
     }
 
     return attachment;
@@ -175,13 +160,12 @@ export class AttachmentsService {
     taskId: string,
     attachmentId: string,
   ) {
-    const attachment =
-      await this.findById(
-        teamId,
-        groupId,
-        taskId,
-        attachmentId,
-      );
+    const attachment = await this.findById(
+      teamId,
+      groupId,
+      taskId,
+      attachmentId,
+    );
 
     // ===================================================
     // Delete From Cloudinary
@@ -197,9 +181,7 @@ export class AttachmentsService {
     // ===================================================
 
     const deletedAttachment =
-      await this.attachmentsRepository.delete(
-        attachmentId,
-      );
+      await this.attachmentsRepository.delete(attachmentId);
 
     // ===================================================
     // Realtime Event

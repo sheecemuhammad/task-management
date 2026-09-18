@@ -6,15 +6,11 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class UsersRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   // Find a user by their unique ID
 
-  async findById(
-    id: string,
-  ): Promise<User | null> {
+  async findById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { id },
     });
@@ -22,9 +18,7 @@ export class UsersRepository {
 
   // Find a user by their email address
 
-  async findByEmail(
-    email: string,
-  ): Promise<User | null> {
+  async findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
     });
@@ -33,9 +27,7 @@ export class UsersRepository {
   // Create a new user in the database
   // Password is intentionally excluded from the response
 
-  async create(
-    data: Prisma.UserCreateInput,
-  ): Promise<Omit<User, 'password'>> {
+  async create(data: Prisma.UserCreateInput): Promise<Omit<User, 'password'>> {
     return this.prisma.user.create({
       data,
 

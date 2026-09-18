@@ -9,18 +9,13 @@ export interface CommentLikeBatchItem {
 
 @Injectable()
 export class CommentLikesRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   // =====================================================
   // Find Like
   // =====================================================
 
-  async findByCommentAndUser(
-    commentId: string,
-    userId: string,
-  ) {
+  async findByCommentAndUser(commentId: string, userId: string) {
     return this.prisma.commentLike.findUnique({
       where: {
         commentId_userId: {
@@ -35,10 +30,7 @@ export class CommentLikesRepository {
   // Create Single Like
   // =====================================================
 
-  async create(
-    commentId: string,
-    userId: string,
-  ) {
+  async create(commentId: string, userId: string) {
     return this.prisma.commentLike.create({
       data: {
         commentId,
@@ -51,10 +43,7 @@ export class CommentLikesRepository {
   // Delete Single Like
   // =====================================================
 
-  async delete(
-    commentId: string,
-    userId: string,
-  ) {
+  async delete(commentId: string, userId: string) {
     return this.prisma.commentLike.delete({
       where: {
         commentId_userId: {
@@ -69,9 +58,7 @@ export class CommentLikesRepository {
   // Count Likes
   // =====================================================
 
-  async countByComment(
-    commentId: string,
-  ): Promise<number> {
+  async countByComment(commentId: string): Promise<number> {
     return this.prisma.commentLike.count({
       where: {
         commentId,
@@ -83,9 +70,7 @@ export class CommentLikesRepository {
   // Batch Create Likes
   // =====================================================
 
-  async createMany(
-    likes: CommentLikeBatchItem[],
-  ): Promise<void> {
+  async createMany(likes: CommentLikeBatchItem[]): Promise<void> {
     if (likes.length === 0) {
       return;
     }
@@ -100,9 +85,7 @@ export class CommentLikesRepository {
   // Batch Delete Likes
   // =====================================================
 
-  async deleteMany(
-    likes: CommentLikeBatchItem[],
-  ): Promise<void> {
+  async deleteMany(likes: CommentLikeBatchItem[]): Promise<void> {
     if (likes.length === 0) {
       return;
     }
@@ -129,21 +112,18 @@ export class CommentLikesRepository {
       return [];
     }
 
-    const likes =
-      await this.prisma.commentLike.findMany({
-        where: {
-          commentId,
-          userId: {
-            in: userIds,
-          },
+    const likes = await this.prisma.commentLike.findMany({
+      where: {
+        commentId,
+        userId: {
+          in: userIds,
         },
-        select: {
-          userId: true,
-        },
-      });
+      },
+      select: {
+        userId: true,
+      },
+    });
 
-    return likes.map(
-      (like) => like.userId,
-    );
+    return likes.map((like) => like.userId);
   }
 }

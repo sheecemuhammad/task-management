@@ -9,9 +9,7 @@ export interface RealtimeRoomUser {
 
 @Injectable()
 export class JoinRoomPolicy {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   // =====================================================
   // Team Room
@@ -30,15 +28,14 @@ export class JoinRoomPolicy {
       return true;
     }
 
-    const membership =
-      await this.prisma.teamMember.findUnique({
-        where: {
-          userId_teamId: {
-            userId: user.id,
-            teamId,
-          },
+    const membership = await this.prisma.teamMember.findUnique({
+      where: {
+        userId_teamId: {
+          userId: user.id,
+          teamId,
         },
-      });
+      },
+    });
 
     return !!membership;
   }
@@ -55,15 +52,14 @@ export class JoinRoomPolicy {
       return false;
     }
 
-    const taskGroup =
-      await this.prisma.taskGroup.findUnique({
-        where: {
-          id: groupId,
-        },
-        select: {
-          teamId: true,
-        },
-      });
+    const taskGroup = await this.prisma.taskGroup.findUnique({
+      where: {
+        id: groupId,
+      },
+      select: {
+        teamId: true,
+      },
+    });
 
     if (!taskGroup) {
       return false;
@@ -74,15 +70,14 @@ export class JoinRoomPolicy {
       return true;
     }
 
-    const membership =
-      await this.prisma.teamMember.findUnique({
-        where: {
-          userId_teamId: {
-            userId: user.id,
-            teamId: taskGroup.teamId,
-          },
+    const membership = await this.prisma.teamMember.findUnique({
+      where: {
+        userId_teamId: {
+          userId: user.id,
+          teamId: taskGroup.teamId,
         },
-      });
+      },
+    });
 
     return !!membership;
   }
@@ -99,29 +94,27 @@ export class JoinRoomPolicy {
       return false;
     }
 
-    const task =
-      await this.prisma.task.findUnique({
-        where: {
-          id: taskId,
-        },
-        select: {
-          groupId: true,
-        },
-      });
+    const task = await this.prisma.task.findUnique({
+      where: {
+        id: taskId,
+      },
+      select: {
+        groupId: true,
+      },
+    });
 
     if (!task) {
       return false;
     }
 
-    const taskGroup =
-      await this.prisma.taskGroup.findUnique({
-        where: {
-          id: task.groupId,
-        },
-        select: {
-          teamId: true,
-        },
-      });
+    const taskGroup = await this.prisma.taskGroup.findUnique({
+      where: {
+        id: task.groupId,
+      },
+      select: {
+        teamId: true,
+      },
+    });
 
     if (!taskGroup) {
       return false;
@@ -132,15 +125,14 @@ export class JoinRoomPolicy {
       return true;
     }
 
-    const membership =
-      await this.prisma.teamMember.findUnique({
-        where: {
-          userId_teamId: {
-            userId: user.id,
-            teamId: taskGroup.teamId,
-          },
+    const membership = await this.prisma.teamMember.findUnique({
+      where: {
+        userId_teamId: {
+          userId: user.id,
+          teamId: taskGroup.teamId,
         },
-      });
+      },
+    });
 
     return !!membership;
   }

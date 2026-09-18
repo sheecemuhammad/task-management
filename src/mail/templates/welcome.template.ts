@@ -1,6 +1,4 @@
-export function welcomeTemplate(
-  name: string,
-): string {
+export function welcomeTemplate(name: string): string {
   return `
     <!DOCTYPE html>
     <html>

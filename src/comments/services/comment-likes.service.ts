@@ -37,27 +37,22 @@ export class CommentLikesService {
     // ===================================================
 
     if (!userId) {
-      throw new BadRequestException(
-        'User ID is required',
-      );
+      throw new BadRequestException('User ID is required');
     }
 
     // ===================================================
     // Verify Comment
     // ===================================================
 
-    const comment =
-      await this.commentsRepository.findCommentInTeam(
-        commentId,
-        taskId,
-        groupId,
-        teamId,
-      );
+    const comment = await this.commentsRepository.findCommentInTeam(
+      commentId,
+      taskId,
+      groupId,
+      teamId,
+    );
 
     if (!comment) {
-      throw new NotFoundException(
-        'Comment not found',
-      );
+      throw new NotFoundException('Comment not found');
     }
 
     // ===================================================
@@ -80,11 +75,7 @@ export class CommentLikesService {
      */
 
     const latestRedisState =
-      await this.commentLikeQueueService
-        .getLatestLikeState(
-          commentId,
-          userId,
-        );
+      await this.commentLikeQueueService.getLatestLikeState(commentId, userId);
 
     let currentLiked: boolean;
 
@@ -92,11 +83,10 @@ export class CommentLikesService {
       currentLiked = latestRedisState;
     } else {
       const existingLike =
-        await this.commentLikesRepository
-          .findByCommentAndUser(
-            commentId,
-            userId,
-          );
+        await this.commentLikesRepository.findByCommentAndUser(
+          commentId,
+          userId,
+        );
 
       currentLiked = !!existingLike;
     }
@@ -118,11 +108,7 @@ export class CommentLikesService {
      * 2. Updates the Redis latest-state Hash.
      */
 
-    await this.commentLikeQueueService.addLikeEvent(
-      commentId,
-      userId,
-      liked,
-    );
+    await this.commentLikeQueueService.addLikeEvent(commentId, userId, liked);
 
     // ===================================================
     // Calculate Like Count
@@ -138,13 +124,10 @@ export class CommentLikesService {
      * reconcile every Redis state against the database.
      */
 
-    let likeCount =
-      await this.commentLikesRepository
-        .countByComment(commentId);
+    let likeCount = await this.commentLikesRepository.countByComment(commentId);
 
     const redisStates =
-      await this.commentLikeQueueService
-        .getLatestLikeStates(commentId);
+      await this.commentLikeQueueService.getLatestLikeStates(commentId);
 
     /*
      * Redis contains the latest state for users who have
@@ -154,19 +137,14 @@ export class CommentLikesService {
      * We compare each Redis state with PostgreSQL.
      */
 
-    for (const [
-      redisUserId,
-      redisLiked,
-    ] of Object.entries(redisStates)) {
+    for (const [redisUserId, redisLiked] of Object.entries(redisStates)) {
       const databaseLike =
-        await this.commentLikesRepository
-          .findByCommentAndUser(
-            commentId,
-            redisUserId,
-          );
+        await this.commentLikesRepository.findByCommentAndUser(
+          commentId,
+          redisUserId,
+        );
 
-      const databaseLiked =
-        !!databaseLike;
+      const databaseLiked = !!databaseLike;
 
       /*
        * DB = false
@@ -174,10 +152,7 @@ export class CommentLikesService {
        *
        * This like has not been persisted yet.
        */
-      if (
-        !databaseLiked &&
-        redisLiked
-      ) {
+      if (!databaseLiked && redisLiked) {
         likeCount += 1;
       }
 
@@ -187,10 +162,7 @@ export class CommentLikesService {
        *
        * This unlike has not been persisted yet.
        */
-      if (
-        databaseLiked &&
-        !redisLiked
-      ) {
+      if (databaseLiked && !redisLiked) {
         likeCount -= 1;
       }
     }
@@ -211,16 +183,12 @@ export class CommentLikesService {
       ? REALTIME_EVENTS.COMMENT_LIKED
       : REALTIME_EVENTS.COMMENT_UNLIKED;
 
-    await this.realtimeService.emitToRoom(
-      taskRoom(comment.taskId),
-      event,
-      {
-        commentId,
-        userId,
-        liked,
-        likeCount,
-      },
-    );
+    await this.realtimeService.emitToRoom(taskRoom(comment.taskId), event, {
+      commentId,
+      userId,
+      liked,
+      likeCount,
+    });
 
     // ===================================================
     // Response

@@ -1,9 +1,4 @@
-import {
-  IsInt,
-  IsOptional,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
 export class CreateShareDto {
   @IsOptional()

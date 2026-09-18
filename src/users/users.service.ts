@@ -1,7 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-} from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 
 import * as bcrypt from 'bcrypt';
 
@@ -21,53 +18,36 @@ export class UsersService {
     private readonly mailService: MailService,
   ) {}
 
-  async findById(
-    id: string,
-  ): Promise<User | null> {
+  async findById(id: string): Promise<User | null> {
     return this.usersRepository.findById(id);
   }
 
-  async findByEmail(
-    email: string,
-  ): Promise<User | null> {
+  async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findByEmail(email);
   }
 
-  async create(
-    createUserDto: CreateUserDto,
-  ) {
-    const existingUser =
-      await this.usersRepository.findByEmail(
-        createUserDto.email,
-      );
+  async create(createUserDto: CreateUserDto) {
+    const existingUser = await this.usersRepository.findByEmail(
+      createUserDto.email,
+    );
 
     if (existingUser) {
-      throw new ConflictException(
-        'Email already registered',
-      );
+      throw new ConflictException('Email already registered');
     }
 
-    const hashedPassword =
-      await bcrypt.hash(
-        createUserDto.password,
-        12,
-      );
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 12);
 
-    const user =
-      await this.usersRepository.create({
-        name: createUserDto.name,
+    const user = await this.usersRepository.create({
+      name: createUserDto.name,
 
-        email: createUserDto.email,
+      email: createUserDto.email,
 
-        password: hashedPassword,
-      });
+      password: hashedPassword,
+    });
 
     // Send welcome email after successful registration
 
-    await this.mailService.sendWelcomeEmail(
-      user.email,
-      user.name,
-    );
+    await this.mailService.sendWelcomeEmail(user.email, user.name);
 
     return user;
   }

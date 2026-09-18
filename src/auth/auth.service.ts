@@ -4,42 +4,45 @@ import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import ms, { StringValue } from 'ms';
+
 import { UsersRepository } from '../users/users.repository';
 import { LoginDto } from './dto/login.dto';
 import { RefreshSessionRepository } from './repositories/refresh-session.repository';
 import { OAuthAccountRepository } from './repositories/oauth-account.repository';
 import { MailService } from '../mail/mail.service';
 
+import type { OAuthProfile } from './interfaces/oauth-profile.interface';
+
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersRepository: UsersRepository,
-
     private readonly jwtService: JwtService,
-
     private readonly configService: ConfigService,
-
     private readonly refreshSessionRepository: RefreshSessionRepository,
-
     private readonly oauthAccountRepository: OAuthAccountRepository,
-
     private readonly mailService: MailService,
   ) {}
 
-  // Generate a random refresh token and return it as a string
+  // =====================================================
+  // Generate Refresh Token
+  // =====================================================
 
   private generateRefreshToken(): string {
     return randomBytes(32).toString('base64url');
   }
 
-  // Hash the refresh token using SHA-256
-  // and return the hash as a string
+  // =====================================================
+  // Hash Refresh Token
+  // =====================================================
 
   private hashRefreshToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }
 
+  // =====================================================
   // LOCAL LOGIN
+  // =====================================================
 
   async login(loginDto: LoginDto) {
     const user = await this.usersRepository.findByEmail(loginDto.email);
@@ -62,6 +65,7 @@ export class AuthService {
     } catch (error) {
       console.error('Failed to send login security alert:', error);
     }
+
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
@@ -97,7 +101,9 @@ export class AuthService {
     };
   }
 
+  // =====================================================
   // REFRESH TOKEN
+  // =====================================================
 
   async refresh(refreshToken: string) {
     const tokenHash = this.hashRefreshToken(refreshToken);
@@ -141,9 +147,11 @@ export class AuthService {
     );
 
     // Revoke old refresh session
+
     await this.refreshSessionRepository.revoke(session.id);
 
     // Create new refresh session
+
     await this.refreshSessionRepository.create({
       tokenHash: newRefreshTokenHash,
 
@@ -162,9 +170,9 @@ export class AuthService {
     };
   }
 
-  // --------------------------------------------------
+  // =====================================================
   // LOGOUT
-  // --------------------------------------------------
+  // =====================================================
 
   async logout(refreshToken: string) {
     const tokenHash = this.hashRefreshToken(refreshToken);
@@ -189,15 +197,11 @@ export class AuthService {
     };
   }
 
+  // =====================================================
   // GOOGLE OAUTH LOGIN
+  // =====================================================
 
-  async googleLogin(profile: {
-    provider: string;
-    providerId: string;
-    email: string;
-    name: string;
-    avatarUrl?: string;
-  }) {
+  async googleLogin(profile: OAuthProfile) {
     // Check whether this Google account
     // is already linked to a user.
 
@@ -309,15 +313,11 @@ export class AuthService {
     };
   }
 
+  // =====================================================
   // GITHUB OAUTH LOGIN
+  // =====================================================
 
-  async githubLogin(profile: {
-    provider: string;
-    providerId: string;
-    email: string;
-    name: string;
-    avatarUrl?: string;
-  }) {
+  async githubLogin(profile: OAuthProfile) {
     // Check whether this GitHub account
     // is already linked to a user.
 

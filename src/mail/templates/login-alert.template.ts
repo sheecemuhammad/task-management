@@ -1,6 +1,4 @@
-export function loginAlertTemplate(
-  name: string,
-): string {
+export function loginAlertTemplate(name: string): string {
   return `
     <!DOCTYPE html>
     <html>

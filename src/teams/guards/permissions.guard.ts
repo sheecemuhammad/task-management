@@ -5,6 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
 
 import { SystemRole, TeamRole } from '../../common/enums/role.enum';
 
@@ -12,6 +13,15 @@ import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 
 import { TeamsRepository } from '../repositories/teams.repository';
 import { TeamMemberPermissionRepository } from '../repositories/team-member-permission.repository';
+
+interface AuthenticatedUser {
+  userId: string;
+  systemRole: SystemRole;
+}
+
+interface AuthenticatedRequest extends Request {
+  user: AuthenticatedUser;
+}
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -33,11 +43,17 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
 
     const user = request.user;
-    const userId = user?.userId;
-    const teamId = request.params?.teamId;
+    const userId = user.userId;
+    const teamIdParam = request.params.teamId;
+
+    if (typeof teamIdParam !== 'string' || !teamIdParam) {
+      throw new ForbiddenException('Unable to determine team');
+    }
+
+    const teamId = teamIdParam;
 
     if (!userId || !teamId) {
       throw new ForbiddenException('Unable to determine user or team');

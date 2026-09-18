@@ -20,6 +20,14 @@ import {
   CommentDeletedPayload,
 } from '../../common/realtime-contract/payload';
 
+type CommentWithAuthor = Awaited<
+  ReturnType<CommentsRepository['findAllByTask']>
+>[number];
+
+type CommentTreeNode = CommentWithAuthor & {
+  children: CommentTreeNode[];
+};
+
 @Injectable()
 export class CommentsService {
   constructor(
@@ -199,9 +207,9 @@ export class CommentsService {
     return deletedComment;
   }
 
-  private buildCommentTree(comments: any[]) {
-    const commentMap = new Map<string, any>();
-    const roots: any[] = [];
+  private buildCommentTree(comments: CommentWithAuthor[]): CommentTreeNode[] {
+    const commentMap = new Map<string, CommentTreeNode>();
+    const roots: CommentTreeNode[] = [];
 
     for (const comment of comments) {
       commentMap.set(comment.id, {
@@ -212,6 +220,10 @@ export class CommentsService {
 
     for (const comment of comments) {
       const node = commentMap.get(comment.id);
+
+      if (!node) {
+        continue;
+      }
 
       if (comment.parentId) {
         const parent = commentMap.get(comment.parentId);

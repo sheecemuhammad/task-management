@@ -70,9 +70,7 @@ export class TeamInvitationService {
     const invitationToken = this.generateInvitationToken();
     const tokenHash = this.hashInvitationToken(invitationToken);
 
-    const expiresAt = new Date(
-      Date.now() + 1000 * 60 * 60 * 24 * 7,
-    );
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
 
     const invitation = await this.teamInvitationRepository.create({
       email,
@@ -99,78 +97,50 @@ export class TeamInvitationService {
     };
   }
 
-  async acceptInvitation(
-    token: string,
-    userId: string,
-  ) {
+  async acceptInvitation(token: string, userId: string) {
     const tokenHash = this.hashInvitationToken(token);
 
     const invitation =
-      await this.teamInvitationRepository.findByTokenHash(
-        tokenHash,
-      );
+      await this.teamInvitationRepository.findByTokenHash(tokenHash);
 
     if (!invitation) {
-      throw new NotFoundException(
-        'Invitation not found',
-      );
+      throw new NotFoundException('Invitation not found');
     }
 
     if (invitation.acceptedAt) {
-      throw new ConflictException(
-        'Invitation has already been accepted',
-      );
+      throw new ConflictException('Invitation has already been accepted');
     }
 
     if (invitation.expiresAt <= new Date()) {
-      throw new ConflictException(
-        'Invitation has expired',
-      );
+      throw new ConflictException('Invitation has expired');
     }
 
-    const user =
-      await this.usersRepository.findById(userId);
+    const user = await this.usersRepository.findById(userId);
 
     if (!user) {
-      throw new NotFoundException(
-        'User not found',
-      );
+      throw new NotFoundException('User not found');
     }
 
-    if (
-      user.email.toLowerCase() !==
-      invitation.email.toLowerCase()
-    ) {
+    if (user.email.toLowerCase() !== invitation.email.toLowerCase()) {
       throw new ConflictException(
         'This invitation belongs to a different email address',
       );
     }
 
-    const existingMembership =
-      await this.teamsRepository.findMembership(
-        userId,
-        invitation.teamId,
-      );
-
-    if (existingMembership) {
-      throw new ConflictException(
-        'User is already a member of this team',
-      );
-    }
-
-    const teamRole = this.toTeamRole(
-      invitation.role,
-    );
-
-    await this.teamsRepository.addMember(
+    const existingMembership = await this.teamsRepository.findMembership(
       userId,
       invitation.teamId,
-      teamRole,
     );
 
-    await this.teamInvitationRepository.markAccepted(
-      invitation.id,
-    );
+    if (existingMembership) {
+      throw new ConflictException('User is already a member of this team');
+    }
+
+    const teamRole = this.toTeamRole(invitation.role);
+
+    await this.teamsRepository.addMember(userId, invitation.teamId, teamRole);
+
+    await this.teamInvitationRepository.markAccepted(invitation.id);
 
     return {
       message: 'Invitation accepted successfully',

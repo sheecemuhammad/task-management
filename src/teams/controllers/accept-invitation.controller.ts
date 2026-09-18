@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Param,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 
 import { Request } from 'express';
 
@@ -20,9 +14,7 @@ interface AuthenticatedRequest extends Request {
 
 @Controller('invitations')
 export class AcceptInvitationController {
-  constructor(
-    private readonly teamInvitationService: TeamInvitationService,
-  ) {}
+  constructor(private readonly teamInvitationService: TeamInvitationService) {}
 
   @Post(':token/accept')
   @UseGuards(JwtAuthGuard)
@@ -30,9 +22,6 @@ export class AcceptInvitationController {
     @Param('token') token: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.teamInvitationService.acceptInvitation(
-      token,
-      req.user.userId,
-    );
+    return this.teamInvitationService.acceptInvitation(token, req.user.userId);
   }
 }

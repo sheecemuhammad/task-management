@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
 
-import {
-  RealtimeEvent,
-} from '../realtime-contract/events';
+import { RealtimeEvent } from '../realtime-contract/events';
 
 import { RealtimeStreamMessage } from '../realtime-contract/stream-message';
 
@@ -12,8 +10,7 @@ export class RealtimeService {
   private readonly redis: Redis;
 
   private readonly streamName =
-    process.env.REALTIME_STREAM_NAME ||
-    'task-management-events';
+    process.env.REALTIME_STREAM_NAME || 'task-management-events';
 
   constructor() {
     this.redis = new Redis({
@@ -22,16 +19,11 @@ export class RealtimeService {
     });
 
     this.redis.on('connect', () => {
-      console.log(
-        'Realtime Redis connected successfully',
-      );
+      console.log('Realtime Redis connected successfully');
     });
 
     this.redis.on('error', (error) => {
-      console.error(
-        'Realtime Redis connection error:',
-        error,
-      );
+      console.error('Realtime Redis connection error:', error);
     });
   }
 
@@ -91,9 +83,7 @@ export class RealtimeService {
     );
 
     if (!messageId) {
-      throw new Error(
-        'Failed to add realtime event to Redis Stream',
-      );
+      throw new Error('Failed to add realtime event to Redis Stream');
     }
 
     return messageId;

@@ -15,8 +15,11 @@ import { UpdateMemberRoleDto } from '../dto/update-member-role.dto';
 
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { TeamRole } from '../../common/enums/role.enum';
+
 import { Roles } from '../decorators/roles.decorator';
 import { RolesGuard } from '../guards/roles.guard';
+
+import type { AuthenticatedRequest } from '../../auth/interfaces/authenticated-request.interface';
 
 @Controller('teams')
 @UseGuards(JwtAuthGuard)
@@ -24,12 +27,18 @@ export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
   @Post()
-  async create(@Body() createTeamDto: CreateTeamDto, @Req() req: any) {
+  async create(
+    @Body() createTeamDto: CreateTeamDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.teamsService.create(createTeamDto, req.user.userId);
   }
 
   @Get(':teamId')
-  async findById(@Param('teamId') teamId: string, @Req() req: any) {
+  async findById(
+    @Param('teamId') teamId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.teamsService.findById(teamId, req.user.userId);
   }
 
@@ -40,7 +49,7 @@ export class TeamsController {
     @Param('teamId') teamId: string,
     @Param('memberId') memberId: string,
     @Body() dto: UpdateMemberRoleDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.teamsService.updateMemberRole(
       req.user.userId,

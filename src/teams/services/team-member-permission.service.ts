@@ -30,21 +30,17 @@ export class TeamMemberPermissionService {
     );
 
     // Global OWNER can access the team even without membership.
-    const requesterUser = await this.teamsRepository.findUserById(
-      requesterUserId,
-    );
+    const requesterUser =
+      await this.teamsRepository.findUserById(requesterUserId);
 
     if (!requesterUser) {
       throw new NotFoundException('Requester user not found');
     }
 
-    const isGlobalOwner =
-      requesterUser.systemRole === SystemRole.OWNER;
+    const isGlobalOwner = requesterUser.systemRole === SystemRole.OWNER;
 
     if (!isGlobalOwner && !requester) {
-      throw new ForbiddenException(
-        'You are not a member of this team',
-      );
+      throw new ForbiddenException('You are not a member of this team');
     }
 
     // Normal users must be ADMINs of this team.
@@ -55,22 +51,17 @@ export class TeamMemberPermissionService {
     }
 
     // Target member must belong to this same team.
-    const targetMember =
-      await this.teamsRepository.findTeamMemberById(
-        targetMemberId,
-        teamId,
-      );
+    const targetMember = await this.teamsRepository.findTeamMemberById(
+      targetMemberId,
+      teamId,
+    );
 
     if (!targetMember) {
-      throw new NotFoundException(
-        'Target team member not found',
-      );
+      throw new NotFoundException('Target team member not found');
     }
 
     // Remove duplicate permission IDs.
-    const requestedPermissionIds = [
-      ...new Set(dto.permissionIds),
-    ];
+    const requestedPermissionIds = [...new Set(dto.permissionIds)];
 
     // Verify that every requested permission actually exists.
     const permissions =
@@ -78,13 +69,8 @@ export class TeamMemberPermissionService {
         requestedPermissionIds,
       );
 
-    if (
-      permissions.length !==
-      requestedPermissionIds.length
-    ) {
-      throw new NotFoundException(
-        'One or more permissions were not found',
-      );
+    if (permissions.length !== requestedPermissionIds.length) {
+      throw new NotFoundException('One or more permissions were not found');
     }
 
     // Replace the target member's permissions atomically.

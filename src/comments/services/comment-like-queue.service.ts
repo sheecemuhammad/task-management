@@ -1,22 +1,15 @@
-import {
-  Injectable,
-  OnModuleDestroy,
-} from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 
 import Redis from 'ioredis';
 
 @Injectable()
-export class CommentLikeQueueService
-  implements OnModuleDestroy
-{
+export class CommentLikeQueueService implements OnModuleDestroy {
   private readonly redis: Redis;
 
   private readonly streamName =
-    process.env.COMMENT_LIKE_STREAM_NAME ||
-    'comment-like-events';
+    process.env.COMMENT_LIKE_STREAM_NAME || 'comment-like-events';
 
-  private readonly stateKeyPrefix =
-    'comment-like-state:';
+  private readonly stateKeyPrefix = 'comment-like-state:';
 
   constructor() {
     this.redis = new Redis({
@@ -25,16 +18,11 @@ export class CommentLikeQueueService
     });
 
     this.redis.on('connect', () => {
-      console.log(
-        'Comment Like Redis connected successfully',
-      );
+      console.log('Comment Like Redis connected successfully');
     });
 
     this.redis.on('error', (error) => {
-      console.error(
-        'Comment Like Redis connection error:',
-        error,
-      );
+      console.error('Comment Like Redis connection error:', error);
     });
   }
 
@@ -67,9 +55,7 @@ export class CommentLikeQueueService
     );
 
     if (!messageId) {
-      throw new Error(
-        'Failed to add comment like event to Redis Stream',
-      );
+      throw new Error('Failed to add comment like event to Redis Stream');
     }
 
     /*
@@ -86,11 +72,7 @@ export class CommentLikeQueueService
      *
      * userId -> true
      */
-    await this.setLatestLikeState(
-      commentId,
-      userId,
-      liked,
-    );
+    await this.setLatestLikeState(commentId, userId, liked);
 
     return messageId;
   }
@@ -99,9 +81,7 @@ export class CommentLikeQueueService
   // Get State Key
   // =====================================================
 
-  private getStateKey(
-    commentId: string,
-  ): string {
+  private getStateKey(commentId: string): string {
     return `${this.stateKeyPrefix}${commentId}`;
   }
 
@@ -116,11 +96,7 @@ export class CommentLikeQueueService
   ): Promise<void> {
     const key = this.getStateKey(commentId);
 
-    await this.redis.hset(
-      key,
-      userId,
-      String(liked),
-    );
+    await this.redis.hset(key, userId, String(liked));
   }
 
   // =====================================================
@@ -133,10 +109,7 @@ export class CommentLikeQueueService
   ): Promise<boolean | null> {
     const key = this.getStateKey(commentId);
 
-    const value = await this.redis.hget(
-      key,
-      userId,
-    );
+    const value = await this.redis.hget(key, userId);
 
     if (value === null) {
       return null;
@@ -158,10 +131,7 @@ export class CommentLikeQueueService
 
     const result: Record<string, boolean> = {};
 
-    for (const [
-      userId,
-      value,
-    ] of Object.entries(states)) {
+    for (const [userId, value] of Object.entries(states)) {
       result[userId] = value === 'true';
     }
 
@@ -178,10 +148,7 @@ export class CommentLikeQueueService
   ): Promise<void> {
     const key = this.getStateKey(commentId);
 
-    await this.redis.hdel(
-      key,
-      userId,
-    );
+    await this.redis.hdel(key, userId);
   }
 
   // =====================================================
@@ -195,18 +162,13 @@ export class CommentLikeQueueService
   ): Promise<boolean> {
     const key = this.getStateKey(commentId);
 
-    const currentValue =
-      await this.redis.hget(
-        key,
-        userId,
-      );
+    const currentValue = await this.redis.hget(key, userId);
 
     if (currentValue === null) {
       return false;
     }
 
-    const currentState =
-      currentValue === 'true';
+    const currentState = currentValue === 'true';
 
     /*
      * Only remove the state if it is still the
@@ -227,10 +189,7 @@ export class CommentLikeQueueService
       return false;
     }
 
-    await this.redis.hdel(
-      key,
-      userId,
-    );
+    await this.redis.hdel(key, userId);
 
     return true;
   }

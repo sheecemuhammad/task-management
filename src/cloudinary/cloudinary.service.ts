@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import {
+  v2 as cloudinary,
+  UploadApiResponse,
+  UploadApiErrorResponse,
+} from 'cloudinary';
 
 @Injectable()
 export class CloudinaryService {
@@ -13,15 +17,18 @@ export class CloudinaryService {
   }
 
   async uploadFile(file: { buffer: Buffer }): Promise<UploadApiResponse> {
-    return new Promise((resolve, reject) => {
+    return new Promise<UploadApiResponse>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           resource_type: 'auto',
           folder: 'task-management',
         },
-        (error, result) => {
+        (
+          error: UploadApiErrorResponse | undefined,
+          result: UploadApiResponse | undefined,
+        ) => {
           if (error) {
-            reject(error);
+            reject(new Error(error.message));
             return;
           }
 
@@ -37,6 +44,7 @@ export class CloudinaryService {
       uploadStream.end(file.buffer);
     });
   }
+
   async deleteFile(publicId: string, mimeType: string): Promise<void> {
     const resourceType = mimeType.startsWith('image/')
       ? 'image'
@@ -50,14 +58,21 @@ export class CloudinaryService {
         {
           resource_type: resourceType,
         },
-        (error, result) => {
+        (
+          error: UploadApiErrorResponse | undefined,
+          result: UploadApiResponse | undefined,
+        ) => {
           if (error) {
-            reject(error);
+            reject(new Error(error.message));
             return;
           }
 
           if (result?.result !== 'ok' && result?.result !== 'not found') {
-            reject(new Error(`Cloudinary deletion failed: ${result?.result}`));
+            reject(
+              new Error(
+                `Cloudinary deletion failed: ${result?.result ?? 'unknown error'}`,
+              ),
+            );
             return;
           }
 

@@ -1,10 +1,4 @@
-import {
-  Body,
-  Controller,
-  Param,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 
 import { CreateInvitationDto } from '../dto/create-invitation.dto';
 import { TeamInvitationService } from '../services/team-invitation.service';
@@ -17,9 +11,7 @@ import { RolesGuard } from '../guards/roles.guard';
 @Controller('teams')
 @UseGuards(JwtAuthGuard)
 export class TeamInvitationController {
-  constructor(
-    private readonly teamInvitationService: TeamInvitationService,
-  ) {}
+  constructor(private readonly teamInvitationService: TeamInvitationService) {}
 
   @Post(':teamId/invitations')
   @UseGuards(RolesGuard)

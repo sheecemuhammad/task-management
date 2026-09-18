@@ -25,10 +25,7 @@ export class TaskGroupsService {
   // Create Task Group
   // =====================================================
 
-  async create(
-    teamId: string,
-    createTaskGroupDto: CreateTaskGroupDto,
-  ) {
+  async create(teamId: string, createTaskGroupDto: CreateTaskGroupDto) {
     const taskGroup = await this.taskGroupsRepository.create(
       createTaskGroupDto.name,
       teamId,
@@ -58,16 +55,13 @@ export class TaskGroupsService {
   // =====================================================
 
   async findById(groupId: string, teamId: string) {
-    const taskGroup =
-      await this.taskGroupsRepository.findByIdAndTeam(
-        groupId,
-        teamId,
-      );
+    const taskGroup = await this.taskGroupsRepository.findByIdAndTeam(
+      groupId,
+      teamId,
+    );
 
     if (!taskGroup) {
-      throw new NotFoundException(
-        'Task group not found',
-      );
+      throw new NotFoundException('Task group not found');
     }
 
     return taskGroup;
@@ -84,11 +78,10 @@ export class TaskGroupsService {
   ) {
     await this.findById(groupId, teamId);
 
-    const updatedTaskGroup =
-      await this.taskGroupsRepository.update(
-        groupId,
-        updateTaskGroupDto.name,
-      );
+    const updatedTaskGroup = await this.taskGroupsRepository.update(
+      groupId,
+      updateTaskGroupDto.name,
+    );
 
     // Notify users currently viewing this team's
     // task-group list.
@@ -110,29 +103,23 @@ export class TaskGroupsService {
     groupId: string,
     createShareDto: CreateShareDto,
   ) {
-    const group =
-      await this.taskGroupsRepository.findByIdAndTeam(
-        groupId,
-        teamId,
-      );
+    const group = await this.taskGroupsRepository.findByIdAndTeam(
+      groupId,
+      teamId,
+    );
 
     if (!group) {
-      throw new NotFoundException(
-        'Task group not found',
-      );
+      throw new NotFoundException('Task group not found');
     }
 
     const token = generateShareToken();
     const tokenHash = hashShareToken(token);
 
-    const expiresInDays =
-      createShareDto.expiresInDays ?? 7;
+    const expiresInDays = createShareDto.expiresInDays ?? 7;
 
     const expiresAt = new Date();
 
-    expiresAt.setDate(
-      expiresAt.getDate() + expiresInDays,
-    );
+    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
     await this.taskGroupsRepository.setShareToken(
       groupId,
@@ -150,25 +137,17 @@ export class TaskGroupsService {
   // Revoke Share
   // =====================================================
 
-  async revokeShare(
-    teamId: string,
-    groupId: string,
-  ) {
-    const group =
-      await this.taskGroupsRepository.findByIdAndTeam(
-        groupId,
-        teamId,
-      );
+  async revokeShare(teamId: string, groupId: string) {
+    const group = await this.taskGroupsRepository.findByIdAndTeam(
+      groupId,
+      teamId,
+    );
 
     if (!group) {
-      throw new NotFoundException(
-        'Task group not found',
-      );
+      throw new NotFoundException('Task group not found');
     }
 
-    return this.taskGroupsRepository.revokeShareToken(
-      groupId,
-    );
+    return this.taskGroupsRepository.revokeShareToken(groupId);
   }
 
   // =====================================================
@@ -179,23 +158,14 @@ export class TaskGroupsService {
     const tokenHash = hashShareToken(token);
 
     const group =
-      await this.taskGroupsRepository.findByShareTokenHash(
-        tokenHash,
-      );
+      await this.taskGroupsRepository.findByShareTokenHash(tokenHash);
 
     if (!group) {
-      throw new NotFoundException(
-        'Shared task group not found',
-      );
+      throw new NotFoundException('Shared task group not found');
     }
 
-    if (
-      !group.shareExpiresAt ||
-      group.shareExpiresAt <= new Date()
-    ) {
-      throw new NotFoundException(
-        'Share link has expired',
-      );
+    if (!group.shareExpiresAt || group.shareExpiresAt <= new Date()) {
+      throw new NotFoundException('Share link has expired');
     }
 
     return {
@@ -221,16 +191,10 @@ export class TaskGroupsService {
   // Delete Task Group
   // =====================================================
 
-  async delete(
-    groupId: string,
-    teamId: string,
-  ) {
+  async delete(groupId: string, teamId: string) {
     await this.findById(groupId, teamId);
 
-    const deletedTaskGroup =
-      await this.taskGroupsRepository.delete(
-        groupId,
-      );
+    const deletedTaskGroup = await this.taskGroupsRepository.delete(groupId);
 
     // Notify users currently viewing this team's
     // task-group list.

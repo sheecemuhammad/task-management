@@ -14,9 +14,7 @@ export class RefreshSessionRepository {
     });
   }
 
-  async findByTokenHash(
-    tokenHash: string,
-  ): Promise<RefreshSession | null> {
+  async findByTokenHash(tokenHash: string): Promise<RefreshSession | null> {
     return this.prisma.refreshSession.findUnique({
       where: { tokenHash },
     });

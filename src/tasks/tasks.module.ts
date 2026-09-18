@@ -11,10 +11,6 @@ import { TeamsModule } from '../teams/teams.module';
 @Module({
   imports: [TeamsModule],
   controllers: [TasksController, PublicTasksController],
-  providers: [
-    TasksService,
-    TasksRepository,
-    PermissionsGuard,
-  ],
+  providers: [TasksService, TasksRepository, PermissionsGuard],
 })
 export class TasksModule {}

@@ -29,11 +29,11 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../teams/guards/permissions.guard';
 import { Permissions } from '../../teams/decorators/permissions.decorator';
 
+import type { AuthenticatedRequest } from '../../auth/interfaces/authenticated-request.interface';
+
 @ApiTags('Comments')
 @ApiBearerAuth('access-token')
-@Controller(
-  'teams/:teamId/task-groups/:groupId/tasks/:taskId/comments',
-)
+@Controller('teams/:teamId/task-groups/:groupId/tasks/:taskId/comments')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class CommentsController {
   constructor(
@@ -95,7 +95,7 @@ export class CommentsController {
     @Param('groupId') groupId: string,
     @Param('taskId') taskId: string,
     @Body() dto: CreateCommentDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.commentsService.create(
       teamId,
@@ -153,11 +153,7 @@ export class CommentsController {
     @Param('groupId') groupId: string,
     @Param('taskId') taskId: string,
   ) {
-    return this.commentsService.findAll(
-      teamId,
-      groupId,
-      taskId,
-    );
+    return this.commentsService.findAll(teamId, groupId, taskId);
   }
 
   // =====================================================
@@ -168,8 +164,7 @@ export class CommentsController {
   @Permissions('comment:update')
   @ApiOperation({
     summary: 'Update a comment',
-    description:
-      'Updates a comment. Users can only update their own comments.',
+    description: 'Updates a comment. Users can only update their own comments.',
   })
   @ApiParam({
     name: 'teamId',
@@ -204,8 +199,7 @@ export class CommentsController {
   })
   @ApiResponse({
     status: 403,
-    description:
-      'Insufficient permissions or comment ownership violation.',
+    description: 'Insufficient permissions or comment ownership violation.',
   })
   @ApiResponse({
     status: 404,
@@ -217,7 +211,7 @@ export class CommentsController {
     @Param('taskId') taskId: string,
     @Param('commentId') commentId: string,
     @Body() dto: UpdateCommentDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.commentsService.update(
       teamId,
@@ -237,8 +231,7 @@ export class CommentsController {
   @Permissions('comment:delete')
   @ApiOperation({
     summary: 'Delete a comment',
-    description:
-      'Deletes a comment. Users can only delete their own comments.',
+    description: 'Deletes a comment. Users can only delete their own comments.',
   })
   @ApiParam({
     name: 'teamId',
@@ -270,8 +263,7 @@ export class CommentsController {
   })
   @ApiResponse({
     status: 403,
-    description:
-      'Insufficient permissions or comment ownership violation.',
+    description: 'Insufficient permissions or comment ownership violation.',
   })
   @ApiResponse({
     status: 404,
@@ -282,7 +274,7 @@ export class CommentsController {
     @Param('groupId') groupId: string,
     @Param('taskId') taskId: string,
     @Param('commentId') commentId: string,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.commentsService.delete(
       teamId,
@@ -326,8 +318,7 @@ export class CommentsController {
   })
   @ApiResponse({
     status: 201,
-    description:
-      'Comment like toggled successfully.',
+    description: 'Comment like toggled successfully.',
   })
   @ApiResponse({
     status: 401,
@@ -346,7 +337,7 @@ export class CommentsController {
     @Param('groupId') groupId: string,
     @Param('taskId') taskId: string,
     @Param('commentId') commentId: string,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.commentLikesService.toggleLike(
       teamId,

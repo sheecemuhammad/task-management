@@ -14,9 +14,7 @@ export class TeamInvitationRepository {
     });
   }
 
-  async findByTokenHash(
-    tokenHash: string,
-  ): Promise<TeamInvitation | null> {
+  async findByTokenHash(tokenHash: string): Promise<TeamInvitation | null> {
     return this.prisma.teamInvitation.findUnique({
       where: {
         tokenHash,

@@ -26,20 +26,15 @@ interface PendingMessage {
 export class CommentLikeStreamConsumerService
   implements OnModuleInit, OnModuleDestroy
 {
-  private readonly logger = new Logger(
-    CommentLikeStreamConsumerService.name,
-  );
+  private readonly logger = new Logger(CommentLikeStreamConsumerService.name);
 
   private readonly streamName =
-    process.env.COMMENT_LIKE_STREAM_NAME ||
-    'comment-like-events';
+    process.env.COMMENT_LIKE_STREAM_NAME || 'comment-like-events';
 
   private readonly consumerGroup =
-    process.env.COMMENT_LIKE_CONSUMER_GROUP ||
-    'comment-like-group';
+    process.env.COMMENT_LIKE_CONSUMER_GROUP || 'comment-like-group';
 
-  private readonly consumerName =
-    `comment-like-consumer-${process.pid}`;
+  private readonly consumerName = `comment-like-consumer-${process.pid}`;
 
   private readonly redis: Redis;
 
@@ -78,16 +73,11 @@ export class CommentLikeStreamConsumerService
     });
 
     this.redis.on('connect', () => {
-      this.logger.log(
-        'Comment Like Redis consumer connected',
-      );
+      this.logger.log('Comment Like Redis consumer connected');
     });
 
     this.redis.on('error', (error) => {
-      this.logger.error(
-        'Comment Like Redis consumer connection error',
-        error,
-      );
+      this.logger.error('Comment Like Redis consumer connection error', error);
     });
   }
 
@@ -128,10 +118,7 @@ export class CommentLikeStreamConsumerService
         `Comment Like consumer group "${this.consumerGroup}" created`,
       );
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes('BUSYGROUP')
-      ) {
+      if (error instanceof Error && error.message.includes('BUSYGROUP')) {
         this.logger.log(
           `Comment Like consumer group "${this.consumerGroup}" already exists`,
         );
@@ -216,10 +203,7 @@ export class CommentLikeStreamConsumerService
        * If recovery already filled a complete batch,
        * persist immediately.
        */
-      if (
-        this.pendingMessages.length >=
-        this.maxBatchSize
-      ) {
+      if (this.pendingMessages.length >= this.maxBatchSize) {
         await this.flushBatch();
       } else {
         /*
@@ -230,9 +214,7 @@ export class CommentLikeStreamConsumerService
     } catch (error) {
       this.logger.error(
         'Failed to recover pending comment like messages',
-        error instanceof Error
-          ? error.stack
-          : String(error),
+        error instanceof Error ? error.stack : String(error),
       );
     }
   }
@@ -274,9 +256,7 @@ export class CommentLikeStreamConsumerService
             const event = this.parseMessage(fields);
 
             if (!event) {
-              this.logger.warn(
-                `Invalid comment like event: ${messageId}`,
-              );
+              this.logger.warn(`Invalid comment like event: ${messageId}`);
 
               await this.acknowledge(messageId);
 
@@ -294,10 +274,7 @@ export class CommentLikeStreamConsumerService
          * Persist immediately if maximum batch size
          * has been reached.
          */
-        if (
-          this.pendingMessages.length >=
-          this.maxBatchSize
-        ) {
+        if (this.pendingMessages.length >= this.maxBatchSize) {
           await this.flushBatch();
         } else {
           /*
@@ -312,9 +289,7 @@ export class CommentLikeStreamConsumerService
 
         this.logger.error(
           'Comment like stream consumer error',
-          error instanceof Error
-            ? error.stack
-            : String(error),
+          error instanceof Error ? error.stack : String(error),
         );
       }
     }
@@ -348,10 +323,7 @@ export class CommentLikeStreamConsumerService
      * Don't process another batch while one is already
      * being persisted.
      */
-    if (
-      this.isProcessingBatch ||
-      this.pendingMessages.length === 0
-    ) {
+    if (this.isProcessingBatch || this.pendingMessages.length === 0) {
       return;
     }
 
@@ -360,10 +332,7 @@ export class CommentLikeStreamConsumerService
     /*
      * Take up to 100 messages from the queue.
      */
-    const batch = this.pendingMessages.splice(
-      0,
-      this.maxBatchSize,
-    );
+    const batch = this.pendingMessages.splice(0, this.maxBatchSize);
 
     try {
       // -------------------------------------------------
@@ -379,9 +348,7 @@ export class CommentLikeStreamConsumerService
       // -------------------------------------------------
 
       for (const message of batch) {
-        await this.acknowledge(
-          message.messageId,
-        );
+        await this.acknowledge(message.messageId);
       }
 
       // -------------------------------------------------
@@ -390,9 +357,7 @@ export class CommentLikeStreamConsumerService
 
       await this.cleanupPersistedStates(batch);
 
-      this.logger.log(
-        `Comment like batch persisted: ${batch.length} events`,
-      );
+      this.logger.log(`Comment like batch persisted: ${batch.length} events`);
     } catch (error) {
       /*
        * If DB persistence fails, put the messages back
@@ -402,9 +367,7 @@ export class CommentLikeStreamConsumerService
 
       this.logger.error(
         'Failed to persist comment like batch',
-        error instanceof Error
-          ? error.stack
-          : String(error),
+        error instanceof Error ? error.stack : String(error),
       );
     } finally {
       this.isProcessingBatch = false;
@@ -423,9 +386,7 @@ export class CommentLikeStreamConsumerService
   // Cleanup Persisted Redis States
   // =====================================================
 
-  private async cleanupPersistedStates(
-    batch: PendingMessage[],
-  ): Promise<void> {
+  private async cleanupPersistedStates(batch: PendingMessage[]): Promise<void> {
     /*
      * Group the final state of every
      * comment + user combination.
@@ -438,17 +399,10 @@ export class CommentLikeStreamConsumerService
      *
      * Only the latest state is kept.
      */
-    const statesByComment = new Map<
-      string,
-      Map<string, boolean>
-    >();
+    const statesByComment = new Map<string, Map<string, boolean>>();
 
     for (const message of batch) {
-      if (
-        !statesByComment.has(
-          message.event.commentId,
-        )
-      ) {
+      if (!statesByComment.has(message.event.commentId)) {
         statesByComment.set(
           message.event.commentId,
           new Map<string, boolean>(),
@@ -457,10 +411,7 @@ export class CommentLikeStreamConsumerService
 
       statesByComment
         .get(message.event.commentId)!
-        .set(
-          message.event.userId,
-          message.event.liked,
-        );
+        .set(message.event.userId, message.event.liked);
     }
 
     /*
@@ -468,20 +419,13 @@ export class CommentLikeStreamConsumerService
      * state only if it still matches the state we just
      * persisted.
      */
-    for (const [
-      commentId,
-      userStates,
-    ] of statesByComment.entries()) {
-      for (const [
-        userId,
-        persistedState,
-      ] of userStates.entries()) {
-        await this.queueService
-          .removeLatestLikeStateIfMatches(
-            commentId,
-            userId,
-            persistedState,
-          );
+    for (const [commentId, userStates] of statesByComment.entries()) {
+      for (const [userId, persistedState] of userStates.entries()) {
+        await this.queueService.removeLatestLikeStateIfMatches(
+          commentId,
+          userId,
+          persistedState,
+        );
       }
     }
   }
@@ -490,32 +434,19 @@ export class CommentLikeStreamConsumerService
   // Parse Redis Stream Message
   // =====================================================
 
-  private parseMessage(
-    fields: string[],
-  ): CommentLikeEvent | null {
+  private parseMessage(fields: string[]): CommentLikeEvent | null {
     const data: Record<string, string> = {};
 
-    for (
-      let index = 0;
-      index < fields.length;
-      index += 2
-    ) {
+    for (let index = 0; index < fields.length; index += 2) {
       const key = fields[index];
       const value = fields[index + 1];
 
-      if (
-        key &&
-        value !== undefined
-      ) {
+      if (key && value !== undefined) {
         data[key] = value;
       }
     }
 
-    if (
-      !data.commentId ||
-      !data.userId ||
-      data.liked === undefined
-    ) {
+    if (!data.commentId || !data.userId || data.liked === undefined) {
       return null;
     }
 
@@ -531,14 +462,8 @@ export class CommentLikeStreamConsumerService
   // Acknowledge Message
   // =====================================================
 
-  private async acknowledge(
-    messageId: string,
-  ): Promise<void> {
-    await this.redis.xack(
-      this.streamName,
-      this.consumerGroup,
-      messageId,
-    );
+  private async acknowledge(messageId: string): Promise<void> {
+    await this.redis.xack(this.streamName, this.consumerGroup, messageId);
   }
 
   // =====================================================

@@ -8,16 +8,14 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 
-import {
-  Server,
-  Socket,
-} from 'socket.io';
+import { DefaultEventsMap, Server, Socket } from 'socket.io';
 
-import {
-  Server as HttpServer,
-} from 'http';
+import { Server as HttpServer } from 'http';
 
 import { JoinRoomPolicy } from './join-room-policy';
+
+import { JwtPayload } from '../../../auth/interfaces/jwt-payload.interface';
+import { RealtimeSocketUser } from './realtime-socket-user.interface';
 
 import {
   taskRoom,
@@ -32,16 +30,31 @@ interface SocketCallbackResponse {
   message?: string;
 }
 
+interface RealtimeSocketData {
+  user?: RealtimeSocketUser;
+}
+
+type RealtimeSocket = Socket<
+  DefaultEventsMap,
+  DefaultEventsMap,
+  DefaultEventsMap,
+  RealtimeSocketData
+>;
+
+type RealtimeServer = Server<
+  DefaultEventsMap,
+  DefaultEventsMap,
+  DefaultEventsMap,
+  RealtimeSocketData
+>;
+
 @Injectable()
 export class RealtimeSocketGatewayService
   implements OnModuleInit, OnModuleDestroy
 {
-  private readonly logger =
-    new Logger(
-      RealtimeSocketGatewayService.name,
-    );
+  private readonly logger = new Logger(RealtimeSocketGatewayService.name);
 
-  private io: Server | null = null;
+  private io: RealtimeServer | null = null;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -64,7 +77,7 @@ export class RealtimeSocketGatewayService
   // Get Socket Server
   // =====================================================
 
-  getServer(): Server | null {
+  getServer(): RealtimeServer | null {
     return this.io;
   }
 
@@ -72,52 +85,34 @@ export class RealtimeSocketGatewayService
   // Initialize Socket.IO
   // =====================================================
 
-  initialize(
-    httpServer: HttpServer,
-  ): void {
+  initialize(httpServer: HttpServer): void {
     if (this.io) {
       return;
     }
 
-    this.io = new Server(
-      httpServer,
-      {
-        cors: {
-          origin:
-            this.configService.get<string>(
-              'FRONTEND_URL',
-            ) || '*',
-        },
+    this.io = new Server(httpServer, {
+      cors: {
+        origin: this.configService.get<string>('FRONTEND_URL') || '*',
       },
-    );
+    });
 
     // ===================================================
     // Socket Authentication
     // ===================================================
 
-    this.io.use(
-      (socket, next) => {
-        void this.authenticateSocket(
-          socket,
-          next,
-        );
-      },
-    );
+    this.io.use((socket, next) => {
+      void this.authenticateSocket(socket, next);
+    });
 
     // ===================================================
     // Connection Handler
     // ===================================================
 
-    this.io.on(
-      'connection',
-      (socket) => {
-        this.handleConnection(socket);
-      },
-    );
+    this.io.on('connection', (socket) => {
+      void this.handleConnection(socket);
+    });
 
-    this.logger.log(
-      'Realtime Socket.IO gateway initialized',
-    );
+    this.logger.log('Realtime Socket.IO gateway initialized');
   }
 
   // =====================================================
@@ -125,43 +120,32 @@ export class RealtimeSocketGatewayService
   // =====================================================
 
   private async authenticateSocket(
-    socket: Socket,
-    next: (
-      error?: Error,
-    ) => void,
+    socket: RealtimeSocket,
+    next: (error?: Error) => void,
   ): Promise<void> {
     try {
-      const token =
-        this.extractToken(socket);
+      const token = this.extractToken(socket);
 
       if (!token) {
-        return next(
-          new Error('Unauthorized'),
-        );
+        next(new Error('Unauthorized'));
+        return;
       }
 
-      const payload =
-        await this.jwtService.verifyAsync(
-          token,
-        );
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
 
       if (!payload?.sub) {
-        return next(
-          new Error('Unauthorized'),
-        );
+        next(new Error('Unauthorized'));
+        return;
       }
 
       socket.data.user = {
         id: payload.sub,
-        systemRole:
-          payload.systemRole,
+        systemRole: payload.systemRole,
       };
 
       next();
     } catch {
-      next(
-        new Error('Unauthorized'),
-      );
+      next(new Error('Unauthorized'));
     }
   }
 
@@ -169,32 +153,23 @@ export class RealtimeSocketGatewayService
   // Extract JWT Token
   // =====================================================
 
-  private extractToken(
-    socket: Socket,
-  ): string | null {
-    const authToken =
-      socket.handshake.auth?.token;
+  private extractToken(socket: RealtimeSocket): string | null {
+    const auth = socket.handshake.auth as { token?: unknown };
+    const authToken = auth.token;
 
-    if (
-      typeof authToken === 'string' &&
-      authToken.length > 0
-    ) {
-      return authToken.startsWith(
-        'Bearer ',
-      )
+    if (typeof authToken === 'string' && authToken.length > 0) {
+      return authToken.startsWith('Bearer ')
         ? authToken.substring(7)
         : authToken;
     }
 
-    const authorization =
-      socket.handshake.headers
-        .authorization;
+    const authorization = socket.handshake.headers.authorization;
 
-    if (
-      !authorization?.startsWith(
-        'Bearer ',
-      )
-    ) {
+    if (typeof authorization !== 'string') {
+      return null;
+    }
+
+    if (!authorization.startsWith('Bearer ')) {
       return null;
     }
 
@@ -205,11 +180,8 @@ export class RealtimeSocketGatewayService
   // Handle Connection
   // =====================================================
 
-  private handleConnection(
-    socket: Socket,
-  ): void {
-    const userId =
-      socket.data.user?.id;
+  private async handleConnection(socket: RealtimeSocket): Promise<void> {
+    const userId = socket.data.user?.id;
 
     if (!userId) {
       socket.disconnect();
@@ -220,9 +192,7 @@ export class RealtimeSocketGatewayService
     // User Room
     // ===================================================
 
-    socket.join(
-      userRoom(userId),
-    );
+    await socket.join(userRoom(userId));
 
     this.logger.log(
       `Realtime socket connected: ${socket.id} (user: ${userId})`,
@@ -236,16 +206,10 @@ export class RealtimeSocketGatewayService
       'joinTeam',
       async (
         teamId: string,
-        callback?: (
-          response: SocketCallbackResponse,
-        ) => void,
+        callback?: (response: SocketCallbackResponse) => void,
       ) => {
         try {
-          const joined =
-            await this.joinTeamRoom(
-              socket,
-              teamId,
-            );
+          const joined = await this.joinTeamRoom(socket, teamId);
 
           callback?.({
             success: joined,
@@ -253,23 +217,19 @@ export class RealtimeSocketGatewayService
             ...(joined
               ? {}
               : {
-                  message:
-                    'You are not authorized to join this team room',
+                  message: 'You are not authorized to join this team room',
                 }),
           });
         } catch (error) {
           this.logger.error(
             'Failed to join team room',
-            error instanceof Error
-              ? error.stack
-              : String(error),
+            error instanceof Error ? error.stack : String(error),
           );
 
           callback?.({
             success: false,
             id: teamId,
-            message:
-              'Failed to join team room',
+            message: 'Failed to join team room',
           });
         }
       },
@@ -283,16 +243,10 @@ export class RealtimeSocketGatewayService
       'leaveTeam',
       async (
         teamId: string,
-        callback?: (
-          response: SocketCallbackResponse,
-        ) => void,
+        callback?: (response: SocketCallbackResponse) => void,
       ) => {
         try {
-          const left =
-            await this.leaveTeamRoom(
-              socket,
-              teamId,
-            );
+          const left = await this.leaveTeamRoom(socket, teamId);
 
           callback?.({
             success: left,
@@ -301,16 +255,13 @@ export class RealtimeSocketGatewayService
         } catch (error) {
           this.logger.error(
             'Failed to leave team room',
-            error instanceof Error
-              ? error.stack
-              : String(error),
+            error instanceof Error ? error.stack : String(error),
           );
 
           callback?.({
             success: false,
             id: teamId,
-            message:
-              'Failed to leave team room',
+            message: 'Failed to leave team room',
           });
         }
       },
@@ -324,16 +275,10 @@ export class RealtimeSocketGatewayService
       'joinTaskGroup',
       async (
         groupId: string,
-        callback?: (
-          response: SocketCallbackResponse,
-        ) => void,
+        callback?: (response: SocketCallbackResponse) => void,
       ) => {
         try {
-          const joined =
-            await this.joinTaskGroupRoom(
-              socket,
-              groupId,
-            );
+          const joined = await this.joinTaskGroupRoom(socket, groupId);
 
           callback?.({
             success: joined,
@@ -348,16 +293,13 @@ export class RealtimeSocketGatewayService
         } catch (error) {
           this.logger.error(
             'Failed to join task-group room',
-            error instanceof Error
-              ? error.stack
-              : String(error),
+            error instanceof Error ? error.stack : String(error),
           );
 
           callback?.({
             success: false,
             id: groupId,
-            message:
-              'Failed to join task-group room',
+            message: 'Failed to join task-group room',
           });
         }
       },
@@ -371,16 +313,10 @@ export class RealtimeSocketGatewayService
       'leaveTaskGroup',
       async (
         groupId: string,
-        callback?: (
-          response: SocketCallbackResponse,
-        ) => void,
+        callback?: (response: SocketCallbackResponse) => void,
       ) => {
         try {
-          const left =
-            await this.leaveTaskGroupRoom(
-              socket,
-              groupId,
-            );
+          const left = await this.leaveTaskGroupRoom(socket, groupId);
 
           callback?.({
             success: left,
@@ -389,16 +325,13 @@ export class RealtimeSocketGatewayService
         } catch (error) {
           this.logger.error(
             'Failed to leave task-group room',
-            error instanceof Error
-              ? error.stack
-              : String(error),
+            error instanceof Error ? error.stack : String(error),
           );
 
           callback?.({
             success: false,
             id: groupId,
-            message:
-              'Failed to leave task-group room',
+            message: 'Failed to leave task-group room',
           });
         }
       },
@@ -412,16 +345,10 @@ export class RealtimeSocketGatewayService
       'joinTask',
       async (
         taskId: string,
-        callback?: (
-          response: SocketCallbackResponse,
-        ) => void,
+        callback?: (response: SocketCallbackResponse) => void,
       ) => {
         try {
-          const joined =
-            await this.joinTaskRoom(
-              socket,
-              taskId,
-            );
+          const joined = await this.joinTaskRoom(socket, taskId);
 
           callback?.({
             success: joined,
@@ -429,23 +356,19 @@ export class RealtimeSocketGatewayService
             ...(joined
               ? {}
               : {
-                  message:
-                    'You are not authorized to join this task room',
+                  message: 'You are not authorized to join this task room',
                 }),
           });
         } catch (error) {
           this.logger.error(
             'Failed to join task room',
-            error instanceof Error
-              ? error.stack
-              : String(error),
+            error instanceof Error ? error.stack : String(error),
           );
 
           callback?.({
             success: false,
             id: taskId,
-            message:
-              'Failed to join task room',
+            message: 'Failed to join task room',
           });
         }
       },
@@ -459,16 +382,10 @@ export class RealtimeSocketGatewayService
       'leaveTask',
       async (
         taskId: string,
-        callback?: (
-          response: SocketCallbackResponse,
-        ) => void,
+        callback?: (response: SocketCallbackResponse) => void,
       ) => {
         try {
-          const left =
-            await this.leaveTaskRoom(
-              socket,
-              taskId,
-            );
+          const left = await this.leaveTaskRoom(socket, taskId);
 
           callback?.({
             success: left,
@@ -477,16 +394,13 @@ export class RealtimeSocketGatewayService
         } catch (error) {
           this.logger.error(
             'Failed to leave task room',
-            error instanceof Error
-              ? error.stack
-              : String(error),
+            error instanceof Error ? error.stack : String(error),
           );
 
           callback?.({
             success: false,
             id: taskId,
-            message:
-              'Failed to leave task room',
+            message: 'Failed to leave task room',
           });
         }
       },
@@ -496,51 +410,31 @@ export class RealtimeSocketGatewayService
     // Disconnect
     // ===================================================
 
-    socket.on(
-      'disconnect',
-      (reason) => {
-        this.logger.log(
-          `Realtime socket disconnected: ${socket.id} (${reason})`,
-        );
-      },
-    );
+    socket.on('disconnect', (reason) => {
+      this.logger.log(`Realtime socket disconnected: ${socket.id} (${reason})`);
+    });
   }
 
   // =====================================================
   // Join Team Room
   // =====================================================
 
-  async joinTeamRoom(
-    socket: Socket,
-    teamId: string,
-  ): Promise<boolean> {
-    const user =
-      socket.data.user;
+  async joinTeamRoom(socket: RealtimeSocket, teamId: string): Promise<boolean> {
+    const user = socket.data.user;
 
-    if (
-      !user?.id ||
-      !teamId
-    ) {
+    if (!user?.id || !teamId) {
       return false;
     }
 
-    const allowed =
-      await this.joinRoomPolicy.canJoinTeamRoom(
-        user,
-        teamId,
-      );
+    const allowed = await this.joinRoomPolicy.canJoinTeamRoom(user, teamId);
 
     if (!allowed) {
-      this.logger.warn(
-        `User ${user.id} denied access to team room: ${teamId}`,
-      );
+      this.logger.warn(`User ${user.id} denied access to team room: ${teamId}`);
 
       return false;
     }
 
-    await socket.join(
-      teamRoom(teamId),
-    );
+    await socket.join(teamRoom(teamId));
 
     this.logger.log(
       `Socket ${socket.id} joined team room: ${teamRoom(teamId)}`,
@@ -554,20 +448,16 @@ export class RealtimeSocketGatewayService
   // =====================================================
 
   async leaveTeamRoom(
-    socket: Socket,
+    socket: RealtimeSocket,
     teamId: string,
   ): Promise<boolean> {
     if (!teamId) {
       return false;
     }
 
-    await socket.leave(
-      teamRoom(teamId),
-    );
+    await socket.leave(teamRoom(teamId));
 
-    this.logger.log(
-      `Socket ${socket.id} left team room: ${teamRoom(teamId)}`,
-    );
+    this.logger.log(`Socket ${socket.id} left team room: ${teamRoom(teamId)}`);
 
     return true;
   }
@@ -577,24 +467,19 @@ export class RealtimeSocketGatewayService
   // =====================================================
 
   async joinTaskGroupRoom(
-    socket: Socket,
+    socket: RealtimeSocket,
     groupId: string,
   ): Promise<boolean> {
-    const user =
-      socket.data.user;
+    const user = socket.data.user;
 
-    if (
-      !user?.id ||
-      !groupId
-    ) {
+    if (!user?.id || !groupId) {
       return false;
     }
 
-    const allowed =
-      await this.joinRoomPolicy.canJoinTaskGroupRoom(
-        user,
-        groupId,
-      );
+    const allowed = await this.joinRoomPolicy.canJoinTaskGroupRoom(
+      user,
+      groupId,
+    );
 
     if (!allowed) {
       this.logger.warn(
@@ -604,9 +489,7 @@ export class RealtimeSocketGatewayService
       return false;
     }
 
-    await socket.join(
-      taskGroupRoom(groupId),
-    );
+    await socket.join(taskGroupRoom(groupId));
 
     this.logger.log(
       `Socket ${socket.id} joined task-group room: ${taskGroupRoom(groupId)}`,
@@ -620,16 +503,14 @@ export class RealtimeSocketGatewayService
   // =====================================================
 
   async leaveTaskGroupRoom(
-    socket: Socket,
+    socket: RealtimeSocket,
     groupId: string,
   ): Promise<boolean> {
     if (!groupId) {
       return false;
     }
 
-    await socket.leave(
-      taskGroupRoom(groupId),
-    );
+    await socket.leave(taskGroupRoom(groupId));
 
     this.logger.log(
       `Socket ${socket.id} left task-group room: ${taskGroupRoom(groupId)}`,
@@ -642,37 +523,22 @@ export class RealtimeSocketGatewayService
   // Join Task Room
   // =====================================================
 
-  async joinTaskRoom(
-    socket: Socket,
-    taskId: string,
-  ): Promise<boolean> {
-    const user =
-      socket.data.user;
+  async joinTaskRoom(socket: RealtimeSocket, taskId: string): Promise<boolean> {
+    const user = socket.data.user;
 
-    if (
-      !user?.id ||
-      !taskId
-    ) {
+    if (!user?.id || !taskId) {
       return false;
     }
 
-    const allowed =
-      await this.joinRoomPolicy.canJoinTaskRoom(
-        user,
-        taskId,
-      );
+    const allowed = await this.joinRoomPolicy.canJoinTaskRoom(user, taskId);
 
     if (!allowed) {
-      this.logger.warn(
-        `User ${user.id} denied access to task room: ${taskId}`,
-      );
+      this.logger.warn(`User ${user.id} denied access to task room: ${taskId}`);
 
       return false;
     }
 
-    await socket.join(
-      taskRoom(taskId),
-    );
+    await socket.join(taskRoom(taskId));
 
     this.logger.log(
       `Socket ${socket.id} joined task room: ${taskRoom(taskId)}`,
@@ -686,20 +552,16 @@ export class RealtimeSocketGatewayService
   // =====================================================
 
   async leaveTaskRoom(
-    socket: Socket,
+    socket: RealtimeSocket,
     taskId: string,
   ): Promise<boolean> {
     if (!taskId) {
       return false;
     }
 
-    await socket.leave(
-      taskRoom(taskId),
-    );
+    await socket.leave(taskRoom(taskId));
 
-    this.logger.log(
-      `Socket ${socket.id} left task room: ${taskRoom(taskId)}`,
-    );
+    this.logger.log(`Socket ${socket.id} left task room: ${taskRoom(taskId)}`);
 
     return true;
   }

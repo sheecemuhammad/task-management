@@ -1,8 +1,4 @@
-import {
-  IsEmail,
-  IsEnum,
-  IsNotEmpty,
-} from 'class-validator';
+import { IsEmail, IsEnum, IsNotEmpty } from 'class-validator';
 import { TeamRole } from '../../common/enums/role.enum';
 
 export class CreateInvitationDto {

@@ -1,13 +1,17 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+
 import { LoginDto } from '../dto/login.dto';
 import { RefreshTokenDto } from '../dto/refresh-token.dto';
 import { LogoutDto } from '../dto/logout.dto';
+
 import { AuthService } from '../auth.service';
-import { UseGuards } from '@nestjs/common';
+
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { GoogleAuthGuard } from '../guards/google-auth.guard';
 import { GithubAuthGuard } from '../guards/github-auth.guard';
-import { Get, Request } from '@nestjs/common';
+
+import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
+import type { OAuthProfile } from '../interfaces/oauth-profile.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -30,7 +34,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  getMe(@Request() req: any) {
+  getMe(@Req() req: AuthenticatedRequest) {
     return req.user;
   }
 
@@ -42,19 +46,19 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  googleCallback(@Request() req: any) {
+  googleCallback(@Req() req: { user: OAuthProfile }) {
     return this.authService.googleLogin(req.user);
   }
 
   @Get('github')
   @UseGuards(GithubAuthGuard)
   githubLogin() {
-    // Passport redirects the user to GitHub.
+    // Passport handles the redirect to GitHub.
   }
 
   @Get('github/callback')
   @UseGuards(GithubAuthGuard)
-  githubCallback(@Request() req: any) {
+  githubCallback(@Req() req: { user: OAuthProfile }) {
     return this.authService.githubLogin(req.user);
   }
 }
