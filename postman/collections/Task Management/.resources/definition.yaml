@@ -13,3 +13,4 @@ variables:
   taskId: ""
   testToken: ""
   commentId: ""
+  teamCId: ""

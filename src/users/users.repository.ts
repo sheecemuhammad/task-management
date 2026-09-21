@@ -1,14 +1,17 @@
 import { Injectable } from '@nestjs/common';
-
 import { Prisma, User } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+
+export type SafeUser = Omit<User, 'password'>;
 
 @Injectable()
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Find a user by their unique ID
+  // =====================================================
+  // FIND USER
+  // =====================================================
 
   async findById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({
@@ -16,18 +19,17 @@ export class UsersRepository {
     });
   }
 
-  // Find a user by their email address
-
   async findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
     });
   }
 
-  // Create a new user in the database
-  // Password is intentionally excluded from the response
+  // =====================================================
+  // CREATE USER
+  // =====================================================
 
-  async create(data: Prisma.UserCreateInput): Promise<Omit<User, 'password'>> {
+  async create(data: Prisma.UserCreateInput): Promise<SafeUser> {
     return this.prisma.user.create({
       data,
 
@@ -43,13 +45,11 @@ export class UsersRepository {
     });
   }
 
-  // Update an existing user
-  // Password is intentionally excluded from the response
+  // =====================================================
+  // UPDATE USER
+  // =====================================================
 
-  async update(
-    id: string,
-    data: Prisma.UserUpdateInput,
-  ): Promise<Omit<User, 'password'>> {
+  async update(id: string, data: Prisma.UserUpdateInput): Promise<SafeUser> {
     return this.prisma.user.update({
       where: { id },
 

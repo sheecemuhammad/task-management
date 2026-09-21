@@ -1,5 +1,5 @@
 $kind: http-request
-url: "{{baseUrl}}/teams/{{teamBId}}"
+url: "{{baseUrl}}/teams/{{teamCId}}"
 method: GET
 auth:
   type: bearer

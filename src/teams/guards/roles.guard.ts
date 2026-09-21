@@ -5,20 +5,11 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
 
+import type { AuthenticatedRequest } from '../../auth/interfaces/authenticated-request.interface';
 import { SystemRole, TeamRole } from '../../common/enums/role.enum';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { TeamsRepository } from '../repositories/teams.repository';
-
-interface AuthenticatedUser {
-  userId: string;
-  systemRole: SystemRole;
-}
-
-interface AuthenticatedRequest extends Request {
-  user: AuthenticatedUser;
-}
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -42,15 +33,9 @@ export class RolesGuard implements CanActivate {
     const user = request.user;
     const userId = user.userId;
 
-    const teamIdParam = request.params.teamId;
+    const teamId = request.params.teamId;
 
-    if (typeof teamIdParam !== 'string' || !teamIdParam) {
-      throw new ForbiddenException('Unable to determine user or team');
-    }
-
-    const teamId = teamIdParam;
-
-    if (!userId) {
+    if (typeof teamId !== 'string' || !teamId || !userId) {
       throw new ForbiddenException('Unable to determine user or team');
     }
 

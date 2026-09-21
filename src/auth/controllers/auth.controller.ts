@@ -28,8 +28,15 @@ export class AuthController {
   }
 
   @Post('logout')
-  logout(@Body() logoutDto: LogoutDto) {
-    return this.authService.logout(logoutDto.refreshToken);
+  @UseGuards(JwtAuthGuard)
+  logout(
+    @Body() logoutDto: LogoutDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.authService.logout(
+      logoutDto.refreshToken,
+      req.user.userId,
+    );
   }
 
   @Get('me')

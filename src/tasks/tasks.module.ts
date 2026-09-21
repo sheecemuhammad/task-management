@@ -5,9 +5,10 @@ import { TasksService } from './services/tasks.service';
 import { TasksRepository } from './repositories/tasks.repositories';
 import { PublicTasksController } from './controllers/public-tasks.controller';
 import { TeamsModule } from '../teams/teams.module';
+import { RealtimeModule } from '../common/realtime/realtime.module';
 
 @Module({
-  imports: [TeamsModule],
+  imports: [TeamsModule, RealtimeModule],
   controllers: [TasksController, PublicTasksController],
   providers: [TasksService, TasksRepository],
 })

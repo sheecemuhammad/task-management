@@ -48,14 +48,8 @@ import { UsersModule } from '../users/users.module';
   ],
 
   exports: [
-    // TeamsService,
-    // TeamsRepository,
-    // TeamInvitationRepository,
-    // TeamInvitationService,
-    // TeamMemberPermissionService,
-    // TeamMemberPermissionRepository,
-    // FeatureService,
-    // FeatureRepository,
+    TeamsRepository,
+    TeamMemberPermissionRepository,
     PermissionsGuard,
   ],
 })

@@ -5,23 +5,12 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
 
+import type { AuthenticatedRequest } from '../../auth/interfaces/authenticated-request.interface';
 import { SystemRole, TeamRole } from '../../common/enums/role.enum';
-
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
-
 import { TeamsRepository } from '../repositories/teams.repository';
 import { TeamMemberPermissionRepository } from '../repositories/team-member-permission.repository';
-
-interface AuthenticatedUser {
-  userId: string;
-  systemRole: SystemRole;
-}
-
-interface AuthenticatedRequest extends Request {
-  user: AuthenticatedUser;
-}
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -37,7 +26,7 @@ export class PermissionsGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
-    // If endpoint doesn't require permissions,
+    // If the endpoint does not require permissions,
     // allow the request to continue.
     if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
@@ -47,16 +36,14 @@ export class PermissionsGuard implements CanActivate {
 
     const user = request.user;
     const userId = user.userId;
-    const teamIdParam = request.params.teamId;
+    const teamId = request.params.teamId;
 
-    if (typeof teamIdParam !== 'string' || !teamIdParam) {
+    if (typeof teamId !== 'string' || !teamId) {
       throw new ForbiddenException('Unable to determine team');
     }
 
-    const teamId = teamIdParam;
-
-    if (!userId || !teamId) {
-      throw new ForbiddenException('Unable to determine user or team');
+    if (!userId) {
+      throw new ForbiddenException('Unable to determine user');
     }
 
     // Global OWNER has access to all teams.
@@ -86,9 +73,6 @@ export class PermissionsGuard implements CanActivate {
     const assignedPermissionKeys = new Set(
       assignedPermissions.map((item) => item.permission.key),
     );
-
-    console.log('Required permissions:', requiredPermissions);
-    console.log('Assigned permission keys:', [...assignedPermissionKeys]);
 
     const hasAllRequiredPermissions = requiredPermissions.every((permission) =>
       assignedPermissionKeys.has(permission),

@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+import { StringValue } from 'ms';
 
 import { AuthService } from './auth.service';
 import { AuthController } from './controllers/auth.controller';
 
 import { UsersModule } from '../users/users.module';
 import { MailModule } from '../mail/mail.module';
-
-import { JwtModule } from '@nestjs/jwt';
 
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -15,24 +16,18 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 
 import { GithubStrategy } from './strategies/github.strategy';
-
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { GithubAuthGuard } from './guards/github-auth.guard';
 
 import { RefreshSessionRepository } from './repositories/refresh-session.repository';
-
 import { OAuthAccountRepository } from './repositories/oauth-account.repository';
-
-import { StringValue } from 'ms';
 
 @Module({
   imports: [
     UsersModule,
-
     MailModule,
 
     JwtModule.registerAsync({
       imports: [ConfigModule],
-
       inject: [ConfigService],
 
       useFactory: (configService: ConfigService) => ({
@@ -58,6 +53,7 @@ import { StringValue } from 'ms';
     GoogleAuthGuard,
 
     GithubStrategy,
+    GithubAuthGuard,
 
     RefreshSessionRepository,
     OAuthAccountRepository,

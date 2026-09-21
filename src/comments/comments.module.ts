@@ -11,9 +11,10 @@ import { CommentLikeStreamConsumerService } from './services/comment-like-stream
 
 import { TeamsModule } from '../teams/teams.module';
 import { AuthModule } from '../auth/auth.module';
+import { RealtimeModule } from '../common/realtime/realtime.module';
 
 @Module({
-  imports: [TeamsModule, AuthModule],
+  imports: [TeamsModule, AuthModule, RealtimeModule],
   controllers: [CommentsController],
   providers: [
     CommentsService,

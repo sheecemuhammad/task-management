@@ -6,9 +6,10 @@ import { TaskGroupsRepository } from './repositories/task-groups.repository';
 import { PublicTaskGroupsController } from './controllers/public-task-groups.controller';
 
 import { TeamsModule } from '../teams/teams.module';
+import { RealtimeModule } from '../common/realtime/realtime.module';
 
 @Module({
-  imports: [TeamsModule],
+  imports: [TeamsModule, RealtimeModule],
 
   controllers: [TaskGroupsController, PublicTaskGroupsController],
 

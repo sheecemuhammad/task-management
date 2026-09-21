@@ -1,5 +1,4 @@
 $kind: http-request
-name: Logout
 url: "{{baseUrl}}/auth/logout"
 method: POST
 body:
@@ -9,4 +8,8 @@ body:
     \  \"refreshToken\": \"{{refreshToken}}\"\r
 
     }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
 order: 4412715874507015
