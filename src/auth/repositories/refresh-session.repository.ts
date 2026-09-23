@@ -15,6 +15,14 @@ export class RefreshSessionRepository {
     });
   }
 
+  async findById(id: string): Promise<RefreshSession | null> {
+    return this.prisma.refreshSession.findUnique({
+      where: {
+        id,
+      },
+    });
+  }
+
   async findByTokenHash(tokenHash: string): Promise<RefreshSession | null> {
     return this.prisma.refreshSession.findUnique({
       where: {

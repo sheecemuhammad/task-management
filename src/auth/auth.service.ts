@@ -12,7 +12,6 @@ import { RefreshSessionRepository } from './repositories/refresh-session.reposit
 import { OAuthAccountRepository } from './repositories/oauth-account.repository';
 import { MailService } from '../mail/mail.service';
 
-import { CacheService } from '../common/cache/cache.service';
 
 import type { OAuthProfile } from './interfaces/oauth-profile.interface';
 
@@ -25,7 +24,6 @@ export class AuthService {
     private readonly refreshSessionRepository: RefreshSessionRepository,
     private readonly oauthAccountRepository: OAuthAccountRepository,
     private readonly mailService: MailService,
-    private readonly cacheService: CacheService,
   ) {}
 
   // =====================================================
@@ -40,13 +38,11 @@ export class AuthService {
     return createHash('sha256').update(token).digest('hex');
   }
 
-  private async generateTokens(user: User) {
-    const accessToken = await this.jwtService.signAsync({
-      sub: user.id,
-      email: user.email,
-      systemRole: user.systemRole,
-    });
-
+  private async generateTokens(
+    user: User,
+    deviceId?: string,
+    ipAddress?: string,
+  ) {
     const refreshToken = this.generateRefreshToken();
 
     const refreshTokenHash = this.hashRefreshToken(refreshToken);
@@ -58,14 +54,23 @@ export class AuthService {
       Date.now() + ms(refreshTokenExpiresIn as StringValue),
     );
 
-    await this.refreshSessionRepository.create({
+    const session = await this.refreshSessionRepository.create({
       tokenHash: refreshTokenHash,
       expiresAt,
+      deviceId,
+      ipAddress,
       user: {
         connect: {
           id: user.id,
         },
       },
+    });
+
+    const accessToken = await this.jwtService.signAsync({
+      sub: user.id,
+      email: user.email,
+      systemRole: user.systemRole,
+      sessionId: session.id,
     });
 
     return {
@@ -78,7 +83,7 @@ export class AuthService {
   // LOCAL LOGIN
   // =====================================================
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, ipAddress?: string) {
     const user = await this.usersRepository.findByEmail(loginDto.email);
 
     if (!user) {
@@ -100,7 +105,7 @@ export class AuthService {
       console.error('Failed to send login security alert:', error);
     }
 
-    return this.generateTokens(user);
+    return this.generateTokens(user, loginDto.deviceId, ipAddress);
   }
 
   // =====================================================
@@ -139,7 +144,11 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token already used');
     }
 
-    return this.generateTokens(user);
+    return this.generateTokens(
+      user,
+      session.deviceId ?? undefined,
+      session.ipAddress ?? undefined,
+    );
   }
 
   // =====================================================
@@ -156,6 +165,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
+    if (session.userId !== userId) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
     if (session.revokedAt) {
       return {
         message: 'Already logged out',
@@ -163,9 +176,6 @@ export class AuthService {
     }
 
     await this.refreshSessionRepository.revoke(session.id);
-
-    // Invalidate all access tokens issued before this logout.
-    await this.cacheService.set(`auth:logout:${userId}`, Date.now().toString());
 
     return {
       message: 'Logged out successfully',

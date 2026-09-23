@@ -291,11 +291,15 @@ model RefreshSession {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
+  deviceId String?
+  ipAddress String?
+
   expiresAt DateTime
   revokedAt DateTime?
 
   createdAt DateTime @default(now())
 
   @@index([userId])
+  @@index([deviceId])
   @@index([expiresAt])
 }
