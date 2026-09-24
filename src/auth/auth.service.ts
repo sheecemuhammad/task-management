@@ -12,7 +12,6 @@ import { RefreshSessionRepository } from './repositories/refresh-session.reposit
 import { OAuthAccountRepository } from './repositories/oauth-account.repository';
 import { MailService } from '../mail/mail.service';
 
-
 import type { OAuthProfile } from './interfaces/oauth-profile.interface';
 
 @Injectable()
@@ -186,7 +185,11 @@ export class AuthService {
   // GOOGLE OAUTH LOGIN
   // =====================================================
 
-  async googleLogin(profile: OAuthProfile) {
+  async googleLogin(
+    profile: OAuthProfile,
+    deviceId?: string,
+    ipAddress?: string,
+  ) {
     const oauthAccount = await this.oauthAccountRepository.findByProvider(
       profile.provider,
       profile.providerId,
@@ -235,14 +238,18 @@ export class AuthService {
       throw new UnauthorizedException('Unable to create or retrieve user');
     }
 
-    return this.generateTokens(user);
+    return this.generateTokens(user, deviceId, ipAddress);
   }
 
   // =====================================================
   // GITHUB OAUTH LOGIN
   // =====================================================
 
-  async githubLogin(profile: OAuthProfile) {
+  async githubLogin(
+    profile: OAuthProfile,
+    deviceId?: string,
+    ipAddress?: string,
+  ) {
     const oauthAccount = await this.oauthAccountRepository.findByProvider(
       profile.provider,
       profile.providerId,
@@ -291,6 +298,6 @@ export class AuthService {
       throw new UnauthorizedException('Unable to create or retrieve user');
     }
 
-    return this.generateTokens(user);
+    return this.generateTokens(user, deviceId, ipAddress);
   }
 }

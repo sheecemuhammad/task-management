@@ -1,3 +1,6 @@
+-- Sample Task Management Schema for PostgreSQL
+
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 
@@ -412,10 +415,6 @@ CREATE TABLE "RefreshSession" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "tokenHash" TEXT NOT NULL,
     "userId" UUID NOT NULL,
-
-    "deviceId" TEXT,
-    "ipAddress" TEXT,
-
 
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "revokedAt" TIMESTAMP(3),

@@ -6,6 +6,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+
 import type { Request } from 'express';
 
 import { LoginDto } from '../dto/login.dto';
@@ -25,6 +26,10 @@ import type { OAuthProfile } from '../interfaces/oauth-profile.interface';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // =====================================================
+  // LOCAL LOGIN
+  // =====================================================
+
   @Post('login')
   login(
     @Body() loginDto: LoginDto,
@@ -33,10 +38,18 @@ export class AuthController {
     return this.authService.login(loginDto, req.ip);
   }
 
+  // =====================================================
+  // REFRESH TOKEN
+  // =====================================================
+
   @Post('refresh')
   refresh(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refresh(refreshTokenDto.refreshToken);
   }
+
+  // =====================================================
+  // LOGOUT
+  // =====================================================
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
@@ -50,11 +63,19 @@ export class AuthController {
     );
   }
 
+  // =====================================================
+  // CURRENT USER
+  // =====================================================
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   getMe(@Req() req: AuthenticatedRequest) {
     return req.user;
   }
+
+  // =====================================================
+  // GOOGLE OAUTH
+  // =====================================================
 
   @Get('google')
   @UseGuards(GoogleAuthGuard)
@@ -64,9 +85,21 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  googleCallback(@Req() req: { user: OAuthProfile }) {
-    return this.authService.googleLogin(req.user);
+  googleCallback(
+    @Req() req: Request & { user: OAuthProfile },
+  ) {
+    const deviceId = req.query.deviceId as string | undefined;
+
+    return this.authService.googleLogin(
+      req.user,
+      deviceId,
+      req.ip,
+    );
   }
+
+  // =====================================================
+  // GITHUB OAUTH
+  // =====================================================
 
   @Get('github')
   @UseGuards(GithubAuthGuard)
@@ -76,7 +109,15 @@ export class AuthController {
 
   @Get('github/callback')
   @UseGuards(GithubAuthGuard)
-  githubCallback(@Req() req: { user: OAuthProfile }) {
-    return this.authService.githubLogin(req.user);
+  githubCallback(
+    @Req() req: Request & { user: OAuthProfile },
+  ) {
+    const deviceId = req.query.deviceId as string | undefined;
+
+    return this.authService.githubLogin(
+      req.user,
+      deviceId,
+      req.ip,
+    );
   }
 }
