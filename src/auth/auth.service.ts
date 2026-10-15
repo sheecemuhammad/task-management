@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
@@ -16,6 +21,8 @@ import type { OAuthProfile } from './interfaces/oauth-profile.interface';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly jwtService: JwtService,
@@ -83,7 +90,9 @@ export class AuthService {
   // =====================================================
 
   async login(loginDto: LoginDto, ipAddress?: string) {
-    const user = await this.usersRepository.findByEmail(loginDto.email);
+    const user = await this.usersRepository.findByEmail(
+      loginDto.email.trim().toLowerCase(),
+    );
 
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
@@ -101,7 +110,10 @@ export class AuthService {
     try {
       await this.mailService.sendLoginSecurityAlert(user.email, user.name);
     } catch (error) {
-      console.error('Failed to send login security alert:', error);
+      this.logger.error(
+        'Failed to send login security alert',
+        error instanceof Error ? error.stack : String(error),
+      );
     }
 
     return this.generateTokens(user, loginDto.deviceId, ipAddress);
@@ -135,19 +147,29 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    // Atomically consume the refresh session.
-    // Only one concurrent request can successfully consume it.
-    const consumed = await this.refreshSessionRepository.consume(session.id);
-
-    if (!consumed) {
-      throw new UnauthorizedException('Refresh token already used');
-    }
-
-    return this.generateTokens(
+    // Create the replacement session first, then atomically consume the old
+    // one. If consume loses a race, revoke the unused new session.
+    const tokens = await this.generateTokens(
       user,
       session.deviceId ?? undefined,
       session.ipAddress ?? undefined,
     );
+
+    const consumed = await this.refreshSessionRepository.consume(session.id);
+
+    if (!consumed) {
+      const newTokenHash = this.hashRefreshToken(tokens.refreshToken);
+      const newSession =
+        await this.refreshSessionRepository.findByTokenHash(newTokenHash);
+
+      if (newSession) {
+        await this.refreshSessionRepository.revoke(newSession.id);
+      }
+
+      throw new UnauthorizedException('Refresh token already used');
+    }
+
+    return tokens;
   }
 
   // =====================================================
@@ -200,38 +222,7 @@ export class AuthService {
       : null;
 
     if (!user) {
-      const existingUser = await this.usersRepository.findByEmail(
-        profile.email,
-      );
-
-      if (existingUser) {
-        await this.oauthAccountRepository.create({
-          provider: profile.provider,
-          providerId: profile.providerId,
-          userId: existingUser.id,
-        });
-
-        await this.usersRepository.update(existingUser.id, {
-          avatarUrl: profile.avatarUrl,
-        });
-
-        user = await this.usersRepository.findById(existingUser.id);
-      } else {
-        const newUser = await this.usersRepository.create({
-          name: profile.name,
-          email: profile.email,
-          password: null,
-          avatarUrl: profile.avatarUrl,
-        });
-
-        await this.oauthAccountRepository.create({
-          provider: profile.provider,
-          providerId: profile.providerId,
-          userId: newUser.id,
-        });
-
-        user = await this.usersRepository.findById(newUser.id);
-      }
+      user = await this.createOAuthUser(profile);
     }
 
     if (!user) {
@@ -260,38 +251,7 @@ export class AuthService {
       : null;
 
     if (!user) {
-      const existingUser = await this.usersRepository.findByEmail(
-        profile.email,
-      );
-
-      if (existingUser) {
-        await this.oauthAccountRepository.create({
-          provider: profile.provider,
-          providerId: profile.providerId,
-          userId: existingUser.id,
-        });
-
-        await this.usersRepository.update(existingUser.id, {
-          avatarUrl: profile.avatarUrl,
-        });
-
-        user = await this.usersRepository.findById(existingUser.id);
-      } else {
-        const newUser = await this.usersRepository.create({
-          name: profile.name,
-          email: profile.email,
-          password: null,
-          avatarUrl: profile.avatarUrl,
-        });
-
-        await this.oauthAccountRepository.create({
-          provider: profile.provider,
-          providerId: profile.providerId,
-          userId: newUser.id,
-        });
-
-        user = await this.usersRepository.findById(newUser.id);
-      }
+      user = await this.createOAuthUser(profile);
     }
 
     if (!user) {
@@ -299,5 +259,34 @@ export class AuthService {
     }
 
     return this.generateTokens(user, deviceId, ipAddress);
+  }
+
+  /**
+   * Creates a brand-new user for an OAuth identity.
+   * Does not silently link to an existing local account (account-takeover risk).
+   */
+  private async createOAuthUser(profile: OAuthProfile): Promise<User | null> {
+    const existingUser = await this.usersRepository.findByEmail(profile.email);
+
+    if (existingUser) {
+      throw new ConflictException(
+        'An account with this email already exists. Sign in with your password, then link this provider from account settings.',
+      );
+    }
+
+    const newUser = await this.usersRepository.create({
+      name: profile.name,
+      email: profile.email.toLowerCase(),
+      password: null,
+      avatarUrl: profile.avatarUrl,
+    });
+
+    await this.oauthAccountRepository.create({
+      provider: profile.provider,
+      providerId: profile.providerId,
+      userId: newUser.id,
+    });
+
+    return this.usersRepository.findById(newUser.id);
   }
 }

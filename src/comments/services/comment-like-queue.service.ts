@@ -1,9 +1,13 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 
 import Redis from 'ioredis';
 
+import { createRedisClient } from '../../common/redis/create-redis-client';
+
 @Injectable()
 export class CommentLikeQueueService implements OnModuleDestroy {
+  private readonly logger = new Logger(CommentLikeQueueService.name);
+
   private readonly redis: Redis;
 
   private readonly streamName =
@@ -12,17 +16,14 @@ export class CommentLikeQueueService implements OnModuleDestroy {
   private readonly stateKeyPrefix = 'comment-like-state:';
 
   constructor() {
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-    });
+    this.redis = createRedisClient();
 
     this.redis.on('connect', () => {
-      console.log('Comment Like Redis connected successfully');
+      this.logger.log('Comment Like Redis connected successfully');
     });
 
     this.redis.on('error', (error) => {
-      console.error('Comment Like Redis connection error:', error);
+      this.logger.error('Comment Like Redis connection error', error);
     });
   }
 

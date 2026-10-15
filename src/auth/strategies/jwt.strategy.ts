@@ -34,6 +34,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Session not found');
     }
 
+    if (session.userId !== payload.sub) {
+      throw new UnauthorizedException('Session user mismatch');
+    }
+
     if (session.revokedAt) {
       throw new UnauthorizedException('Session revoked');
     }

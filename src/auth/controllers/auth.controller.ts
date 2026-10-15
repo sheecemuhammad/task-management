@@ -6,6 +6,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 
 import type { Request } from 'express';
 
@@ -30,6 +31,7 @@ export class AuthController {
   // LOCAL LOGIN
   // =====================================================
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
   login(
     @Body() loginDto: LoginDto,
@@ -42,6 +44,7 @@ export class AuthController {
   // REFRESH TOKEN
   // =====================================================
 
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post('refresh')
   refresh(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refresh(refreshTokenDto.refreshToken);

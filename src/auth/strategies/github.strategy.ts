@@ -24,7 +24,13 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   ): void {
     const { id, username, displayName, photos, emails } = profile;
 
-    const email = emails?.[0]?.value;
+    const primaryEmail = emails?.find(
+      (entry) =>
+        typeof entry?.value === 'string' &&
+        (entry as { verified?: boolean }).verified === true,
+    );
+
+    const email = primaryEmail?.value;
 
     if (!email) {
       done(null, false);
@@ -36,7 +42,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     const user: OAuthProfile = {
       provider: 'github',
       providerId: id,
-      email,
+      email: email.toLowerCase(),
       name: displayName || username || email,
       avatarUrl,
     };

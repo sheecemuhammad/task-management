@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { Prisma, TeamInvitation } from '@prisma/client';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { Prisma, TeamInvitation, TeamMember, TeamRole } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -11,6 +11,14 @@ export class TeamInvitationRepository {
   ): Promise<TeamInvitation> {
     return this.prisma.teamInvitation.create({
       data,
+    });
+  }
+
+  async deleteById(id: string): Promise<void> {
+    await this.prisma.teamInvitation.delete({
+      where: {
+        id,
+      },
     });
   }
 
@@ -31,7 +39,7 @@ export class TeamInvitationRepository {
   ): Promise<TeamInvitation | null> {
     return this.prisma.teamInvitation.findFirst({
       where: {
-        email,
+        email: email.toLowerCase(),
         teamId,
         acceptedAt: null,
         expiresAt: {
@@ -49,6 +57,47 @@ export class TeamInvitationRepository {
       data: {
         acceptedAt: new Date(),
       },
+    });
+  }
+
+  async acceptAndAddMember(
+    invitationId: string,
+    userId: string,
+    teamId: string,
+    role: TeamRole,
+  ): Promise<{ member: TeamMember; invitation: TeamInvitation }> {
+    return this.prisma.$transaction(async (tx) => {
+      const pending = await tx.teamInvitation.findFirst({
+        where: {
+          id: invitationId,
+          acceptedAt: null,
+        },
+      });
+
+      if (!pending) {
+        throw new ConflictException(
+          'Invitation has already been accepted or was not found',
+        );
+      }
+
+      const member = await tx.teamMember.create({
+        data: {
+          userId,
+          teamId,
+          role,
+        },
+      });
+
+      const invitation = await tx.teamInvitation.update({
+        where: {
+          id: invitationId,
+        },
+        data: {
+          acceptedAt: new Date(),
+        },
+      });
+
+      return { member, invitation };
     });
   }
 }

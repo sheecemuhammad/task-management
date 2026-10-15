@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 
@@ -12,17 +13,28 @@ import { RealtimeService } from '../../common/realtime/realtime.service';
 import { REALTIME_EVENTS } from '../../common/realtime-contract/events';
 import { taskRoom } from '../../common/realtime-contract/room-helpers';
 
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+  'text/plain',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+]);
+
 @Injectable()
 export class AttachmentsService {
+  private readonly logger = new Logger(AttachmentsService.name);
+
   constructor(
     private readonly cloudinaryService: CloudinaryService,
     private readonly attachmentsRepository: AttachmentsRepository,
     private readonly realtimeService: RealtimeService,
   ) {}
-
-  // =====================================================
-  // Upload Attachment
-  // =====================================================
 
   async upload(
     teamId: string,
@@ -38,16 +50,11 @@ export class AttachmentsService {
       throw new BadRequestException('File is required');
     }
 
-    // 10 MB maximum file size
     const maxFileSize = 10 * 1024 * 1024;
 
     if (file.size > maxFileSize) {
       throw new BadRequestException('File size must not exceed 10 MB');
     }
-
-    // ===================================================
-    // Verify Task
-    // ===================================================
 
     const task = await this.attachmentsRepository.findTaskInTeam(
       taskId,
@@ -59,48 +66,51 @@ export class AttachmentsService {
       throw new NotFoundException('Task not found');
     }
 
-    // ===================================================
-    // Detect Actual File MIME Type
-    // ===================================================
-
     const detectedType = await fileTypeFromBuffer(file.buffer);
-
     const mimeType = detectedType?.mime ?? file.mimetype;
 
-    // ===================================================
-    // Upload To Cloudinary
-    // ===================================================
+    if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+      throw new BadRequestException(
+        `Unsupported file type: ${mimeType}. Allowed: images, PDF, text, Word, Excel.`,
+      );
+    }
 
     const uploadedFile = await this.cloudinaryService.uploadFile(file);
 
-    // ===================================================
-    // Save Attachment In PostgreSQL
-    // ===================================================
+    try {
+      const attachment = await this.attachmentsRepository.create(
+        taskId,
+        uploadedFile.secure_url,
+        uploadedFile.public_id,
+        mimeType,
+        file.size,
+      );
 
-    const attachment = await this.attachmentsRepository.create(
-      taskId,
-      uploadedFile.secure_url,
-      uploadedFile.public_id,
-      mimeType,
-      file.size,
-    );
+      await this.realtimeService.emitToRoom(
+        taskRoom(taskId),
+        REALTIME_EVENTS.ATTACHMENT_CREATED,
+        attachment,
+      );
 
-    // ===================================================
-    // Realtime Event
-    // ===================================================
+      return attachment;
+    } catch (error) {
+      try {
+        await this.cloudinaryService.deleteFile(
+          uploadedFile.public_id,
+          mimeType,
+        );
+      } catch (cleanupError) {
+        this.logger.error(
+          `Failed to clean up Cloudinary orphan ${uploadedFile.public_id}`,
+          cleanupError instanceof Error
+            ? cleanupError.stack
+            : String(cleanupError),
+        );
+      }
 
-    await this.realtimeService.emitToRoom(
-      taskRoom(taskId),
-      REALTIME_EVENTS.ATTACHMENT_CREATED,
-      attachment,
-    );
-
-    return attachment;
+      throw error;
+    }
   }
-
-  // =====================================================
-  // Find All Attachments
-  // =====================================================
 
   async findAll(teamId: string, groupId: string, taskId: string) {
     const task = await this.attachmentsRepository.findTaskInTeam(
@@ -115,10 +125,6 @@ export class AttachmentsService {
 
     return this.attachmentsRepository.findByTask(taskId);
   }
-
-  // =====================================================
-  // Find Attachment By ID
-  // =====================================================
 
   async findById(
     teamId: string,
@@ -140,10 +146,6 @@ export class AttachmentsService {
     return attachment;
   }
 
-  // =====================================================
-  // Delete Attachment
-  // =====================================================
-
   async delete(
     teamId: string,
     groupId: string,
@@ -157,25 +159,20 @@ export class AttachmentsService {
       attachmentId,
     );
 
-    // ===================================================
-    // Delete From Cloudinary
-    // ===================================================
-
-    await this.cloudinaryService.deleteFile(
-      attachment.publicId,
-      attachment.mimeType,
-    );
-
-    // ===================================================
-    // Delete Database Record
-    // ===================================================
-
     const deletedAttachment =
       await this.attachmentsRepository.delete(attachmentId);
 
-    // ===================================================
-    // Realtime Event
-    // ===================================================
+    try {
+      await this.cloudinaryService.deleteFile(
+        attachment.publicId,
+        attachment.mimeType,
+      );
+    } catch (error) {
+      this.logger.error(
+        `DB attachment deleted but Cloudinary cleanup failed for ${attachment.publicId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
 
     await this.realtimeService.emitToRoom(
       taskRoom(taskId),

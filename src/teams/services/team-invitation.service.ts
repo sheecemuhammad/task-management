@@ -1,8 +1,11 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { createHash, randomBytes } from 'crypto';
 
 import { UsersRepository } from '../../users/users.repository';
@@ -14,6 +17,8 @@ import { TeamRole } from '../../common/enums/role.enum';
 
 @Injectable()
 export class TeamInvitationService {
+  private readonly logger = new Logger(TeamInvitationService.name);
+
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly teamsRepository: TeamsRepository,
@@ -27,6 +32,10 @@ export class TeamInvitationService {
 
   private hashInvitationToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
   }
 
   private toTeamRole(role: string): TeamRole {
@@ -45,7 +54,8 @@ export class TeamInvitationService {
     teamId: string,
     createInvitationDto: CreateInvitationDto,
   ) {
-    const { email, role } = createInvitationDto;
+    const email = this.normalizeEmail(createInvitationDto.email);
+    const { role } = createInvitationDto;
 
     const team = await this.teamsRepository.findById(teamId);
 
@@ -54,6 +64,17 @@ export class TeamInvitationService {
     }
 
     const user = await this.usersRepository.findByEmail(email);
+
+    if (user) {
+      const existingMembership = await this.teamsRepository.findMembership(
+        user.id,
+        teamId,
+      );
+
+      if (existingMembership) {
+        throw new ConflictException('User is already a member of this team');
+      }
+    }
 
     const existingInvitation =
       await this.teamInvitationRepository.findPendingByEmailAndTeam(
@@ -84,11 +105,24 @@ export class TeamInvitationService {
       },
     });
 
-    await this.mailService.sendTeamInvitation(
-      email,
-      team.name,
-      invitationToken,
-    );
+    try {
+      await this.mailService.sendTeamInvitation(
+        email,
+        team.name,
+        invitationToken,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send team invitation email for ${invitation.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+
+      await this.teamInvitationRepository.deleteById(invitation.id);
+
+      throw new ServiceUnavailableException(
+        'Failed to send invitation email. Please try again.',
+      );
+    }
 
     return {
       message: 'Invitation sent successfully',
@@ -138,9 +172,23 @@ export class TeamInvitationService {
 
     const teamRole = this.toTeamRole(invitation.role);
 
-    await this.teamsRepository.addMember(userId, invitation.teamId, teamRole);
+    try {
+      await this.teamInvitationRepository.acceptAndAddMember(
+        invitation.id,
+        userId,
+        invitation.teamId,
+        teamRole,
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('User is already a member of this team');
+      }
 
-    await this.teamInvitationRepository.markAccepted(invitation.id);
+      throw error;
+    }
 
     return {
       message: 'Invitation accepted successfully',

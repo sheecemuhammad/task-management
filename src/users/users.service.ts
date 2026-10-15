@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 
 import * as bcrypt from 'bcrypt';
 
@@ -14,6 +14,8 @@ type SafeUser = Omit<User, 'password'>;
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly mailService: MailService,
@@ -28,9 +30,9 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto): Promise<SafeUser> {
-    const existingUser = await this.usersRepository.findByEmail(
-      createUserDto.email,
-    );
+    const email = createUserDto.email.trim().toLowerCase();
+
+    const existingUser = await this.usersRepository.findByEmail(email);
 
     if (existingUser) {
       throw new ConflictException('Email already registered');
@@ -40,11 +42,18 @@ export class UsersService {
 
     const user = await this.usersRepository.create({
       name: createUserDto.name,
-      email: createUserDto.email,
+      email,
       password: hashedPassword,
     });
 
-    await this.mailService.sendWelcomeEmail(user.email, user.name);
+    try {
+      await this.mailService.sendWelcomeEmail(user.email, user.name);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send welcome email to ${user.email}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
 
     return user;
   }

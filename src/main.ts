@@ -1,10 +1,11 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RealtimeSocketGatewayService } from './common/realtime/gateway/realtime-socket-gateway.service';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 import { AppModule } from './app.module';
+import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,6 +20,13 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   const port = configService.get<number>('app.port') ?? 3000;
+  const frontendUrl =
+    configService.get<string>('app.frontendUrl') ?? 'http://localhost:3000';
+
+  app.enableCors({
+    origin: frontendUrl,
+    credentials: true,
+  });
 
   // -----------------------------------------
   // Global Validation
@@ -30,6 +38,8 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  app.useGlobalFilters(new PrismaExceptionFilter());
 
   // -----------------------------------------
   // Swagger
@@ -60,9 +70,9 @@ async function bootstrap() {
   // -----------------------------------------
   await app.listen(port);
 
-  console.log(`Application running on: http://localhost:${port}`);
-
-  console.log(`Swagger running on: http://localhost:${port}/api`);
+  const logger = new Logger('Bootstrap');
+  logger.log(`Application running on: http://localhost:${port}`);
+  logger.log(`Swagger running on: http://localhost:${port}/api`);
 }
 
 bootstrap();

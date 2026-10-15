@@ -15,6 +15,7 @@ import { Server as HttpServer } from 'http';
 import { JoinRoomPolicy } from './join-room-policy';
 
 import { JwtPayload } from '../../../auth/interfaces/jwt-payload.interface';
+import { RefreshSessionRepository } from '../../../auth/repositories/refresh-session.repository';
 import { RealtimeSocketUser } from './realtime-socket-user.interface';
 
 import {
@@ -60,6 +61,7 @@ export class RealtimeSocketGatewayService
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly joinRoomPolicy: JoinRoomPolicy,
+    private readonly refreshSessionRepository: RefreshSessionRepository,
   ) {}
 
   // =====================================================
@@ -90,9 +92,13 @@ export class RealtimeSocketGatewayService
       return;
     }
 
+    const frontendUrl =
+      this.configService.get<string>('app.frontendUrl') ??
+      'http://localhost:3000';
+
     this.io = new Server(httpServer, {
       cors: {
-        origin: this.configService.get<string>('FRONTEND_URL') || '*',
+        origin: frontendUrl,
       },
     });
 
@@ -133,7 +139,21 @@ export class RealtimeSocketGatewayService
 
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
 
-      if (!payload?.sub) {
+      if (!payload?.sub || !payload.sessionId) {
+        next(new Error('Unauthorized'));
+        return;
+      }
+
+      const session = await this.refreshSessionRepository.findById(
+        payload.sessionId,
+      );
+
+      if (
+        !session ||
+        session.userId !== payload.sub ||
+        session.revokedAt ||
+        session.expiresAt <= new Date()
+      ) {
         next(new Error('Unauthorized'));
         return;
       }

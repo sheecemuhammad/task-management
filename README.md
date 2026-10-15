@@ -967,57 +967,25 @@ Sharing can be:
 
 # Audit Logging
 
-The database includes an `AuditLog` model.
+The database includes an `AuditLog` model (schema foundation only).
 
-An audit entry contains:
-
-```text
-id
-action
-entityType
-entityId
-userId
-details
-createdAt
-```
-
-The `details` field is stored as JSON.
-
-This provides a foundation for tracking important system changes and user actions.
+**Status:** Not yet written or read by application services. Treat audit logging as planned infrastructure, not a shipped feature.
 
 # Caching and Redis
 
-Redis is integrated through a dedicated cache module.
+Redis is used for:
 
-The Redis service supports:
+* Realtime event streams (Socket.IO fan-out)
+* Comment-like event streams and short-lived like state
+* A reusable `CacheService` / `RedisService` abstraction (available globally; not yet wired into business read paths)
 
-* Get
-* Set
-* Delete
-* Optional TTL
+All Redis clients honor `REDIS_HOST`, `REDIS_PORT`, and `REDIS_PASSWORD`.
 
 Configuration defaults to:
 
 ```text
 Host: localhost
 Port: 6379
-```
-
-Optional password support is also available.
-
-The cache abstraction is:
-
-```text
-Application
-    |
-    v
-CacheService
-    |
-    v
-RedisService
-    |
-    v
-Redis
 ```
 
 # Real-Time Infrastructure
@@ -1337,6 +1305,10 @@ SMTP_FROM=your_sender@example.com
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
+REALTIME_STREAM_NAME=task-management-events
+REALTIME_CONSUMER_GROUP=task-management-group
+COMMENT_LIKE_STREAM_NAME=comment-like-events
+COMMENT_LIKE_CONSUMER_GROUP=comment-like-group
 ```
 
 Redis defaults to:
@@ -1345,6 +1317,8 @@ Redis defaults to:
 Host: localhost
 Port: 6379
 ```
+
+A committed template lives at `.env.example`.
 
 ## Cloudinary
 
@@ -1371,43 +1345,31 @@ npm install
 
 ## 3. Configure Environment Variables
 
-Create:
-
-```text
-.env
+```bash
+cp .env.example .env
 ```
 
-and configure the required variables.
+Edit `.env` with your secrets and service URLs.
 
-## 4. Start PostgreSQL
-
-Make sure PostgreSQL is running and the database configured in `DATABASE_URL` exists.
-
-## 5. Start Redis
-
-Make sure Redis is running.
-
-Default configuration:
-
-```text
-localhost:6379
-```
-
-## 6. Apply Prisma Migrations
-
-For a development database:
+## 4. Start PostgreSQL, Redis, and local SMTP
 
 ```bash
-npx prisma migrate dev
+docker compose up -d
 ```
 
-## 7. Generate Prisma Client
+This starts Postgres (`5432`), Redis (`6379`), and Mailcatcher (`1025` SMTP / `1080` UI).
+
+## 5. Apply Prisma Migrations, Generate Client, and Seed
 
 ```bash
-npx prisma generate
+npm run prisma:migrate
+npm run prisma:generate
+npm run prisma:seed
 ```
 
-## 8. Start the Development Server
+Seeding loads RBAC features/permissions required by permission-guarded routes.
+
+## 6. Start the Development Server
 
 ```bash
 npm run start:dev
@@ -1674,6 +1636,12 @@ This allows session-level control instead of treating every login for a user as 
 
 # API Route Overview
 
+## Users
+
+```text
+POST /users          # public registration (rate-limited)
+```
+
 ## Authentication
 
 ```text
@@ -1695,6 +1663,8 @@ GET /auth/github/callback
 POST  /teams
 GET   /teams/:teamId
 PATCH /teams/:teamId/members/:memberId/role
+POST  /teams/:teamId/invitations
+POST  /invitations/:token/accept
 ```
 
 ## Task Groups
@@ -1905,7 +1875,7 @@ The API architecture naturally maps to frontend areas such as:
 Authentication
     |
     +---- Login
-    +---- Register
+    +---- Register (POST /users)
     +---- Google Login
     +---- GitHub Login
     +---- Session handling

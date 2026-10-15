@@ -1,29 +1,29 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import Redis from 'ioredis';
 
 import { RealtimeEvent } from '../realtime-contract/events';
 
 import { RealtimeStreamMessage } from '../realtime-contract/stream-message';
+import { createRedisClient } from '../redis/create-redis-client';
 
 @Injectable()
-export class RealtimeService {
+export class RealtimeService implements OnModuleDestroy {
+  private readonly logger = new Logger(RealtimeService.name);
+
   private readonly redis: Redis;
 
   private readonly streamName =
     process.env.REALTIME_STREAM_NAME || 'task-management-events';
 
   constructor() {
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-    });
+    this.redis = createRedisClient();
 
     this.redis.on('connect', () => {
-      console.log('Realtime Redis connected successfully');
+      this.logger.log('Realtime Redis connected successfully');
     });
 
     this.redis.on('error', (error) => {
-      console.error('Realtime Redis connection error:', error);
+      this.logger.error('Realtime Redis connection error', error);
     });
   }
 

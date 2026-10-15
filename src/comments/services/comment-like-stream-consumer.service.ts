@@ -7,6 +7,7 @@ import {
 
 import Redis from 'ioredis';
 
+import { createRedisClient } from '../../common/redis/create-redis-client';
 import { CommentLikePersistenceService } from './comment-like-persistence.service';
 import { CommentLikeQueueService } from './comment-like-queue.service';
 
@@ -36,7 +37,13 @@ export class CommentLikeStreamConsumerService
 
   private readonly consumerName = `comment-like-consumer-${process.pid}`;
 
+  private readonly reclaimIdleMs = Number(
+    process.env.COMMENT_LIKE_RECLAIM_IDLE_MS || 30_000,
+  );
+
   private readonly redis: Redis;
+
+  private errorBackoffMs = 1000;
 
   /**
    * Wait 1 second before persisting a batch
@@ -67,10 +74,7 @@ export class CommentLikeStreamConsumerService
     private readonly persistenceService: CommentLikePersistenceService,
     private readonly queueService: CommentLikeQueueService,
   ) {
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-    });
+    this.redis = createRedisClient();
 
     this.redis.on('connect', () => {
       this.logger.log('Comment Like Redis consumer connected');
@@ -89,8 +93,14 @@ export class CommentLikeStreamConsumerService
     await this.createConsumerGroup();
 
     /*
+     * Reclaim idle pending messages from dead consumers
+     * (e.g. previous process PID after restart).
+     */
+    await this.reclaimIdlePending();
+
+    /*
      * Recover messages that were already delivered to
-     * the consumer group but were never acknowledged.
+     * this consumer but were never acknowledged.
      */
     await this.recoverPendingMessages();
 
@@ -98,6 +108,67 @@ export class CommentLikeStreamConsumerService
      * Start consuming new messages.
      */
     void this.consume();
+  }
+
+  private async reclaimIdlePending(): Promise<void> {
+    try {
+      let startId = '0-0';
+      let reclaimedCount = 0;
+
+      for (let i = 0; i < 10; i++) {
+        const result = (await this.redis.xautoclaim(
+          this.streamName,
+          this.consumerGroup,
+          this.consumerName,
+          this.reclaimIdleMs,
+          startId,
+          'COUNT',
+          this.pendingRecoveryBatchSize,
+        )) as [string, Array<[string, string[]]>];
+
+        const nextId = result[0];
+        const messages = result[1] ?? [];
+
+        for (const [messageId, fields] of messages) {
+          if (!fields) {
+            continue;
+          }
+
+          const event = this.parseMessage(fields);
+
+          if (!event) {
+            await this.acknowledge(messageId);
+            continue;
+          }
+
+          this.pendingMessages.push({ messageId, event });
+          reclaimedCount++;
+        }
+
+        if (!messages.length || nextId === startId) {
+          break;
+        }
+
+        startId = nextId;
+      }
+
+      if (reclaimedCount > 0) {
+        this.logger.log(
+          `Reclaimed ${reclaimedCount} idle comment-like stream messages`,
+        );
+
+        if (this.pendingMessages.length >= this.maxBatchSize) {
+          await this.flushBatch();
+        } else {
+          this.startBatchTimer();
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        'Failed to reclaim idle comment-like stream messages',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   // =====================================================
@@ -239,6 +310,8 @@ export class CommentLikeStreamConsumerService
           '>',
         );
 
+        this.errorBackoffMs = 1000;
+
         if (!result) {
           continue;
         }
@@ -270,16 +343,9 @@ export class CommentLikeStreamConsumerService
           }
         }
 
-        /*
-         * Persist immediately if maximum batch size
-         * has been reached.
-         */
         if (this.pendingMessages.length >= this.maxBatchSize) {
           await this.flushBatch();
         } else {
-          /*
-           * Otherwise start the 1-second batch timer.
-           */
           this.startBatchTimer();
         }
       } catch (error) {
@@ -291,6 +357,9 @@ export class CommentLikeStreamConsumerService
           'Comment like stream consumer error',
           error instanceof Error ? error.stack : String(error),
         );
+
+        await new Promise((resolve) => setTimeout(resolve, this.errorBackoffMs));
+        this.errorBackoffMs = Math.min(this.errorBackoffMs * 2, 30_000);
       }
     }
   }

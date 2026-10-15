@@ -12,6 +12,7 @@ import { RealtimeStreamMessage } from '../../realtime-contract/stream-message';
 import { userRoom } from '../../realtime-contract/room-helpers';
 
 import { RealtimeSocketGatewayService } from './realtime-socket-gateway.service';
+import { createRedisClient } from '../../redis/create-redis-client';
 
 @Injectable()
 export class RealtimeStreamConsumerService
@@ -25,37 +26,30 @@ export class RealtimeStreamConsumerService
   private readonly consumerGroup =
     process.env.REALTIME_CONSUMER_GROUP || 'task-management-group';
 
-  private readonly consumerName = `consumer-${process.pid}`;
+  private readonly consumerName = `realtime-consumer-${process.pid}`;
+
+  private readonly reclaimIdleMs = Number(
+    process.env.REALTIME_RECLAIM_IDLE_MS || 30_000,
+  );
 
   private readonly redis: Redis;
 
   private isRunning = true;
 
-  constructor(private readonly gateway: RealtimeSocketGatewayService) {
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
+  private errorBackoffMs = 1000;
 
-      port: Number(process.env.REDIS_PORT) || 6379,
-    });
+  constructor(private readonly gateway: RealtimeSocketGatewayService) {
+    this.redis = createRedisClient();
 
     this.redis.on('error', (error) => {
       this.logger.error('Realtime stream Redis connection error', error);
     });
   }
 
-  // =====================================================
-  // Module Init
-  // =====================================================
-
   async onModuleInit(): Promise<void> {
     await this.createConsumerGroup();
-
     void this.consume();
   }
-
-  // =====================================================
-  // Create Consumer Group
-  // =====================================================
 
   private async createConsumerGroup(): Promise<void> {
     try {
@@ -83,13 +77,36 @@ export class RealtimeStreamConsumerService
     }
   }
 
-  // =====================================================
-  // Consume Stream
-  // =====================================================
+  private async waitForSocketServer(): Promise<boolean> {
+    for (let attempt = 0; attempt < 60 && this.isRunning; attempt++) {
+      if (this.gateway.getServer()) {
+        return true;
+      }
+
+      await this.sleep(500);
+    }
+
+    return !!this.gateway.getServer();
+  }
 
   private async consume(): Promise<void> {
+    const ready = await this.waitForSocketServer();
+
+    if (!ready) {
+      this.logger.warn(
+        'Socket.IO server was not ready; realtime consumer will keep retrying',
+      );
+    }
+
     while (this.isRunning) {
       try {
+        if (!this.gateway.getServer()) {
+          await this.sleep(500);
+          continue;
+        }
+
+        await this.reclaimIdlePending();
+
         const result = await this.redis.xreadgroup(
           'GROUP',
           this.consumerGroup,
@@ -102,6 +119,8 @@ export class RealtimeStreamConsumerService
           this.streamName,
           '>',
         );
+
+        this.errorBackoffMs = 1000;
 
         if (!result) {
           continue;
@@ -123,13 +142,50 @@ export class RealtimeStreamConsumerService
           'Realtime stream consumer error',
           error instanceof Error ? error.stack : String(error),
         );
+
+        await this.sleep(this.errorBackoffMs);
+        this.errorBackoffMs = Math.min(this.errorBackoffMs * 2, 30_000);
       }
     }
   }
 
-  // =====================================================
-  // Process Message
-  // =====================================================
+  private async reclaimIdlePending(): Promise<void> {
+    try {
+      let startId = '0-0';
+
+      for (let i = 0; i < 5; i++) {
+        const result = (await this.redis.xautoclaim(
+          this.streamName,
+          this.consumerGroup,
+          this.consumerName,
+          this.reclaimIdleMs,
+          startId,
+          'COUNT',
+          20,
+        )) as [string, Array<[string, string[]]>];
+
+        const nextId = result[0];
+        const messages = result[1] ?? [];
+
+        for (const [messageId, fields] of messages) {
+          if (fields) {
+            await this.processMessage(messageId, fields);
+          }
+        }
+
+        if (!messages.length || nextId === startId) {
+          break;
+        }
+
+        startId = nextId;
+      }
+    } catch (error) {
+      this.logger.error(
+        'Failed to reclaim idle realtime stream messages',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
 
   private async processMessage(
     messageId: string,
@@ -140,34 +196,24 @@ export class RealtimeStreamConsumerService
 
       if (!message) {
         this.logger.warn(`Invalid realtime stream message: ${messageId}`);
-
         await this.acknowledge(messageId);
-
         return;
       }
 
       const socketServer = this.gateway.getServer();
 
       if (!socketServer) {
-        this.logger.warn('Socket.IO server is not initialized yet');
-
+        this.logger.warn(
+          `Socket.IO not ready; leaving message ${messageId} pending for reclaim`,
+        );
         return;
       }
 
       const payload: unknown = JSON.parse(message.payload);
 
-      // ===================================================
-      // Room Event
-      // ===================================================
-
       if (message.targetType === 'room') {
         socketServer.to(message.targetId).emit(message.event, payload);
-      }
-
-      // ===================================================
-      // User Event
-      // ===================================================
-      else {
+      } else {
         socketServer
           .to(userRoom(message.targetId))
           .emit(message.event, payload);
@@ -186,16 +232,11 @@ export class RealtimeStreamConsumerService
     }
   }
 
-  // =====================================================
-  // Parse Message
-  // =====================================================
-
   private parseMessage(fields: string[]): RealtimeStreamMessage | null {
     const data: Record<string, string> = {};
 
     for (let index = 0; index < fields.length; index += 2) {
       const key = fields[index];
-
       const value = fields[index + 1];
 
       if (key && value !== undefined) {
@@ -219,34 +260,24 @@ export class RealtimeStreamConsumerService
 
     return {
       targetType: data.targetType,
-
       targetId: data.targetId,
-
       event: data.event as RealtimeStreamMessage['event'],
-
       payload: data.payload,
-
       timestamp: data.timestamp,
     };
   }
 
-  // =====================================================
-  // Acknowledge
-  // =====================================================
-
   private async acknowledge(messageId: string): Promise<void> {
     await this.redis.xack(this.streamName, this.consumerGroup, messageId);
-
     this.logger.debug(`Realtime stream event acknowledged: ${messageId}`);
   }
 
-  // =====================================================
-  // Module Destroy
-  // =====================================================
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
   async onModuleDestroy(): Promise<void> {
     this.isRunning = false;
-
     await this.redis.quit();
   }
 }

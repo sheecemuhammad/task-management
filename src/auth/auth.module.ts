@@ -59,6 +59,6 @@ import { OAuthAccountRepository } from './repositories/oauth-account.repository'
     OAuthAccountRepository,
   ],
 
-  exports: [JwtModule],
+  exports: [JwtModule, RefreshSessionRepository],
 })
 export class AuthModule {}
